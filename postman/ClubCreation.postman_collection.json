@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "College Event Hub - Club Creation",
+    "description": "Focused club creation, authorization, duplicate-name, and retrieval flow.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{"key": "baseUrl", "value": "http://localhost:8081"}],
+  "item": [
+    {
+      "name": "01 - Login organization leader",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{leaderUsername}}\",\n  \"password\": \"{{leaderPassword}}\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organization leader login succeeds', () => pm.response.to.have.status(200));", "pm.environment.set('leaderToken', pm.response.json().data.token);"]}}]
+    },
+    {
+      "name": "02 - Login non-leader",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{nonLeaderUsername}}\",\n  \"password\": \"{{nonLeaderPassword}}\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Non-leader login succeeds', () => pm.response.to.have.status(200));", "pm.environment.set('nonLeaderToken', pm.response.json().data.token);"]}}]
+    },
+    {
+      "name": "03 - Organization leader creates club",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"name\": \"Test Coding Club {{clubSuffix}}\",\n  \"description\": \"Club for programming and technical activities\",\n  \"email\": \"codingclub-{{clubSuffix}}@college.com\",\n  \"phoneNumber\": \"9876543210\",\n  \"logo\": \"https://example.com/coding-logo.png\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/clubs", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations", "{{organizationId}}", "clubs"]}
+      },
+      "event": [
+        {"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["const suffix = Date.now().toString();", "pm.environment.set('clubSuffix', suffix);"]}},
+        {"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organization leader creates club', () => pm.response.to.have.status(200));", "const club = pm.response.json().data;", "pm.environment.set('clubId', club.id);", "pm.environment.set('clubName', club.name);", "pm.test('Response includes organization and authenticated leader', () => { pm.expect(String(club.organizationId)).to.eql(String(pm.environment.get('organizationId'))); pm.expect(String(club.leaderId)).to.eql(String(pm.environment.get('leaderId'))); pm.expect(club.leaderUsername).to.eql(pm.environment.get('leaderUsername')); });"]}}]
+    },
+    {
+      "name": "04 - Non-leader cannot create club",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{nonLeaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"name\": \"Unauthorized Club {{clubSuffix}}\",\n  \"description\": \"Should be denied\",\n  \"email\": \"unauthorized-{{clubSuffix}}@college.com\",\n  \"phoneNumber\": \"1234567890\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/clubs", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations", "{{organizationId}}", "clubs"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Non-leader is forbidden from creating club', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "05 - Duplicate club name is rejected",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"name\": \"{{clubName}}\",\n  \"description\": \"Duplicate name check\",\n  \"email\": \"duplicate-{{clubSuffix}}@college.com\",\n  \"phoneNumber\": \"1234567890\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/clubs", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations", "{{organizationId}}", "clubs"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Duplicate club name returns conflict', () => pm.response.to.have.status(409));", "pm.test('Duplicate club name message is returned', () => pm.expect(pm.response.json().message).to.eql('Club with this name already exists')); "]}}]
+    },
+    {
+      "name": "06 - Get all clubs contains new club",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/clubs", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('All clubs fetched', () => pm.response.to.have.status(200));", "const club = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('clubId')));", "pm.test('Created club appears in all clubs', () => pm.expect(club).to.exist);"]}}]
+    },
+    {
+      "name": "07 - Get organization clubs contains new club",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/clubs", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations", "{{organizationId}}", "clubs"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organization clubs fetched', () => pm.response.to.have.status(200));", "const club = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('clubId')));", "pm.test('Created club appears under organization', () => pm.expect(club).to.exist);"]}}]
+    }
+  ]
+}

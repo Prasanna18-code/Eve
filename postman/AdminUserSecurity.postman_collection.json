@@ -1,0 +1,109 @@
+{
+  "info": {
+    "name": "College Event Hub - Admin User Security",
+    "description": "Verifies a normal student JWT cannot access platform-level user administration.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8082"}
+  ],
+  "item": [
+    {
+      "name": "01 - Register student",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"Security\",\n  \"lastName\": \"Test\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"]}
+      },
+      "event": [
+        {"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["const suffix = Date.now().toString();", "pm.environment.set('studentUsername', `admin_guard_${suffix}`);", "pm.environment.set('studentEmail', `admin_guard_${suffix}@example.com`);"]}},
+        {"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student account registered', () => pm.response.to.have.status(201));"]}}
+      ]
+    },
+    {
+      "name": "02 - Login student",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"password\": \"Password123!\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student login succeeded', () => pm.response.to.have.status(200));", "pm.environment.set('studentToken', pm.response.json().data.token);"]}}]
+    },
+    {
+      "name": "03 - Student cannot list admin users",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student is denied admin user access', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "04 - Student cannot deactivate users",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users/999999/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users", "999999", "deactivate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student is denied user deactivation', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "05 - Student cannot activate users",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users/999999/activate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users", "999999", "activate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student is denied user activation', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "06 - Student cannot list admin organizations",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student is denied admin organization access', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "07 - Student cannot list admin events",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student is denied admin event access', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "08 - Student cannot deactivate organizations",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations/999999/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations", "999999", "deactivate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student is denied organization deactivation', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "09 - Student cannot activate organizations",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations/999999/activate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations", "999999", "activate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student is denied organization activation', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "10 - Student cannot cancel admin event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/events/999999/cancel", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events", "999999", "cancel"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student is denied admin event cancellation', () => pm.response.to.have.status(403));"]}}]
+    }
+  ]
+}

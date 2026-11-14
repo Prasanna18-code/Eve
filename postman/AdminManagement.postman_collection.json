@@ -1,0 +1,228 @@
+{
+  "info": {
+    "name": "College Event Hub - Admin Management E2E",
+    "description": "End-to-end admin tests for user, organization, and event operations, including current account-active checks for previously issued student JWTs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{"key": "baseUrl", "value": "http://localhost:8081"}],
+  "item": [
+    {
+      "name": "01 - Login admin",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin login succeeds', () => pm.response.to.have.status(200));", "pm.environment.set('adminToken', pm.response.json().data.token);"]}}]
+    },
+    {
+      "name": "02 - Register organization leader",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{leaderUsername}}\",\n  \"email\": \"{{leaderEmail}}\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"AdminFlow\",\n  \"lastName\": \"Leader\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"]}
+      },
+      "event": [
+        {"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["const suffix = Date.now().toString();", "pm.environment.set('leaderUsername', `adminflow_leader_${suffix}`);", "pm.environment.set('leaderEmail', `adminflow_leader_${suffix}@example.com`);"]}},
+        {"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Leader registered', () => pm.response.to.have.status(201));"]}}
+      ]
+    },
+    {
+      "name": "03 - Login organization leader",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{leaderUsername}}\",\n  \"password\": \"Password123!\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Leader login succeeds', () => pm.response.to.have.status(200));", "pm.environment.set('leaderToken', pm.response.json().data.token);"]}}]
+    },
+    {
+      "name": "04 - Create organization fixture",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"name\": \"AdminFlow Organization {{leaderUsername}}\",\n  \"description\": \"Temporary organization for admin tests\",\n  \"email\": \"{{leaderEmail}}\",\n  \"phoneNumber\": \"1234567890\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organization fixture created', () => pm.response.to.have.status(201));", "pm.environment.set('organizationId', pm.response.json().data.id);"]}}]
+    },
+    {
+      "name": "05 - Create event fixture",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"AdminFlow Event {{leaderUsername}}\",\n  \"description\": \"Temporary event for admin tests\",\n  \"eventDate\": \"2027-09-15\",\n  \"startTime\": \"10:00:00\",\n  \"endTime\": \"13:00:00\",\n  \"venue\": \"Seminar Hall\",\n  \"capacity\": 20,\n  \"registrationDeadline\": \"2027-09-14T23:59:00\",\n  \"type\": \"OFFLINE\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations", "{{organizationId}}", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Event fixture created', () => pm.response.to.have.status(201));", "pm.environment.set('eventId', pm.response.json().data.id);"]}}]
+    },
+    {
+      "name": "06 - Register student fixture",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"AdminFlow\",\n  \"lastName\": \"Student\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"]}
+      },
+      "event": [
+        {"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["const suffix = Date.now().toString();", "pm.environment.set('studentUsername', `adminflow_student_${suffix}`);", "pm.environment.set('studentEmail', `adminflow_student_${suffix}@example.com`);"]}},
+        {"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student fixture registered', () => pm.response.to.have.status(201));", "pm.environment.set('studentId', pm.response.json().data.id);"]}}
+      ]
+    },
+    {
+      "name": "07 - Login student fixture",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"password\": \"Password123!\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student login succeeds', () => pm.response.to.have.status(200));", "pm.environment.set('studentToken', pm.response.json().data.token);"]}}]
+    },
+    {
+      "name": "08 - Admin lists users",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list users', () => pm.response.to.have.status(200));", "const users = pm.response.json().data;", "const student = users.find((user) => String(user.id) === String(pm.environment.get('studentId')));", "const admin = users.find((user) => user.username === pm.environment.get('adminUsername'));", "pm.test('Student fixture is listed', () => pm.expect(student).to.exist);", "pm.test('Admin fixture is listed', () => pm.expect(admin).to.exist);", "if (admin) pm.environment.set('adminId', admin.id);"]}}]
+    },
+    {
+      "name": "08a - Admin cannot deactivate own account",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users/{{adminId}}/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users", "{{adminId}}", "deactivate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Self-deactivation is rejected', () => pm.expect(pm.response.code).to.be.at.least(400));"]}}]
+    },
+    {
+      "name": "08b - Admin remains active",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can still list users', () => pm.response.to.have.status(200));", "const admin = pm.response.json().data.find((user) => user.username === pm.environment.get('adminUsername'));", "pm.test('Admin remains active', () => pm.expect(admin.active).to.eql(true));"]}}]
+    },
+    {
+      "name": "09 - Admin deactivates student",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users/{{studentId}}/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users", "{{studentId}}", "deactivate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin deactivates student', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "10 - Existing student JWT is rejected",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/notifications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Deactivated user existing JWT is rejected', () => pm.response.to.have.status(401));"]}}]
+    },
+    {
+      "name": "11 - Admin verifies student is inactive",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin reloads users', () => pm.response.to.have.status(200));", "const student = pm.response.json().data.find((user) => String(user.id) === String(pm.environment.get('studentId')));", "pm.test('Student active is false', () => pm.expect(student.active).to.eql(false));"]}}]
+    },
+    {
+      "name": "12 - Admin reactivates student",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users/{{studentId}}/activate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users", "{{studentId}}", "activate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin reactivates student', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "13 - Existing student JWT works after reactivation",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/notifications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Existing JWT works after reactivation', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "14 - Admin lists organizations",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list organizations', () => pm.response.to.have.status(200));", "const organization = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('organizationId')));", "pm.test('Organization fixture is listed', () => pm.expect(organization).to.exist);"]}}]
+    },
+    {
+      "name": "15 - Admin deactivates organization",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations/{{organizationId}}/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations", "{{organizationId}}", "deactivate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin deactivates organization', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "16 - Verify organization inactive",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organizations reload', () => pm.response.to.have.status(200));", "const item = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('organizationId')));", "pm.test('Organization active is false', () => pm.expect(item.active).to.eql(false));"]}}]
+    },
+    {
+      "name": "17 - Admin activates organization",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations/{{organizationId}}/activate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations", "{{organizationId}}", "activate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin activates organization', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "18 - Admin lists events",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list events', () => pm.response.to.have.status(200));", "const event = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('eventId')));", "pm.test('Event fixture is listed globally with owning organization', () => { pm.expect(event).to.exist; if (event) pm.expect(String(event.organizationId)).to.eql(String(pm.environment.get('organizationId'))); });"]}}]
+    },
+    {
+      "name": "19 - Admin cancels event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/events/{{eventId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events", "{{eventId}}", "cancel"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin cancels event', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "20 - Verify event cancelled",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Events reload', () => pm.response.to.have.status(200));", "const event = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('eventId')));", "pm.test('Event status is CANCELLED', () => pm.expect(event.status).to.eql('CANCELLED')); "]}}]
+    }
+  ]
+}

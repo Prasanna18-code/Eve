@@ -1,0 +1,185 @@
+{
+  "info": {
+    "name": "College Event Hub - Notification Flow",
+    "description": "Focused end-to-end test for registration, update, cancellation, and unread notification behavior.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8082"}
+  ],
+  "item": [
+    {
+      "name": "01 - Register leader",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{leaderUsername}}\",\n  \"email\": \"{{leaderEmail}}\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"Notification\",\n  \"lastName\": \"Leader\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"]}
+      },
+      "event": [
+        {"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["const suffix = Date.now().toString();", "pm.environment.set('leaderUsername', `notify_leader_${suffix}`);", "pm.environment.set('leaderEmail', `notify_leader_${suffix}@example.com`);"]}},
+        {"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Leader registered', () => pm.response.to.have.status(201));"]}}
+      ]
+    },
+    {
+      "name": "02 - Login leader",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{leaderUsername}}\",\n  \"password\": \"Password123!\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Leader login succeeded', () => pm.response.to.have.status(200));", "pm.environment.set('leaderToken', pm.response.json().data.token);"]}}]
+    },
+    {
+      "name": "03 - Create organization",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"name\": \"Notification Club {{leaderUsername}}\",\n  \"description\": \"Notification flow test organization\",\n  \"email\": \"{{leaderEmail}}\",\n  \"phoneNumber\": \"1234567890\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organization created', () => pm.response.to.have.status(201));", "pm.environment.set('organizationId', pm.response.json().data.id);"]}}]
+    },
+    {
+      "name": "04 - Create event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"Notification Flow {{leaderUsername}}\",\n  \"description\": \"Event for notification integration verification\",\n  \"eventDate\": \"2027-09-15\",\n  \"startTime\": \"10:00:00\",\n  \"endTime\": \"13:00:00\",\n  \"venue\": \"Seminar Hall\",\n  \"capacity\": 20,\n  \"registrationDeadline\": \"2027-09-14T23:59:00\",\n  \"type\": \"OFFLINE\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations", "{{organizationId}}", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Event created', () => pm.response.to.have.status(201));", "pm.environment.set('eventId', pm.response.json().data.id);"]}}]
+    },
+    {
+      "name": "05 - Register student",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"Notification\",\n  \"lastName\": \"Student\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"]}
+      },
+      "event": [
+        {"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["const suffix = Date.now().toString();", "pm.environment.set('studentUsername', `notify_student_${suffix}`);", "pm.environment.set('studentEmail', `notify_student_${suffix}@example.com`);"]}},
+        {"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student registered', () => pm.response.to.have.status(201));"]}}
+      ]
+    },
+    {
+      "name": "06 - Login student",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"password\": \"Password123!\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student login succeeded', () => pm.response.to.have.status(200));", "pm.environment.set('studentToken', pm.response.json().data.token);"]}}]
+    },
+    {
+      "name": "07 - Student registers for event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "POST",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}/registrations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}", "registrations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student registered for event', () => pm.response.to.have.status(201));"]}}]
+    },
+    {
+      "name": "08 - Registration notification and initial unread count",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/notifications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student notifications fetched', () => pm.response.to.have.status(200));", "const eventId = String(pm.environment.get('eventId'));", "const item = pm.response.json().data.find((notification) => notification.type === 'REGISTRATION_SUCCESSFUL' && String(notification.eventId) === eventId);", "pm.test('Registration notification is unread and event-linked', () => { pm.expect(item).to.exist; if (item) { pm.expect(item.title).to.eql('Registration Successful'); pm.expect(item.read).to.eql(false); pm.environment.set('registrationNotificationId', item.id); } });"]}}]
+    },
+    {
+      "name": "09 - Leader updates event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "PUT",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"Updated Notification Flow {{leaderUsername}}\",\n  \"description\": \"Updated for notification integration verification\",\n  \"eventDate\": \"2027-09-15\",\n  \"startTime\": \"10:00:00\",\n  \"endTime\": \"13:00:00\",\n  \"venue\": \"Seminar Hall\",\n  \"capacity\": 20,\n  \"registrationDeadline\": \"2027-09-14T23:59:00\",\n  \"type\": \"OFFLINE\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Event updated', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "10 - Verify update notification and unread count",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/notifications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Notifications fetched after update', () => pm.response.to.have.status(200));", "const eventId = String(pm.environment.get('eventId'));", "const item = pm.response.json().data.find((notification) => notification.type === 'EVENT_UPDATED' && String(notification.eventId) === eventId);", "pm.test('Update notification exists and is unread', () => { pm.expect(item).to.exist; if (item) pm.expect(item.read).to.eql(false); });"]}}]
+    },
+    {
+      "name": "11 - Verify unread count before marking read",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/notifications/unread-count", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications", "unread-count"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unread count is two before mark-read', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().data).to.eql(2); });"]}}]
+    },
+    {
+      "name": "12 - Mark registration notification as read",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/notifications/{{registrationNotificationId}}/read", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications", "{{registrationNotificationId}}", "read"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Registration notification marked read', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "13 - Verify unread count decreased",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/notifications/unread-count", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications", "unread-count"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unread count decreases by one', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().data).to.eql(1); });"]}}]
+    },
+    {
+      "name": "14 - Leader cancels event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}", "cancel"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Event cancellation succeeds', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "15 - Verify cancellation notification",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/notifications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Notifications fetched after cancellation', () => pm.response.to.have.status(200));", "const eventId = String(pm.environment.get('eventId'));", "const item = pm.response.json().data.find((notification) => notification.type === 'EVENT_CANCELLED' && String(notification.eventId) === eventId);", "pm.test('Cancellation notification exists and is unread', () => { pm.expect(item).to.exist; if (item) pm.expect(item.read).to.eql(false); });"]}}]
+    },
+    {
+      "name": "16 - Verify cancelled event remains available",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Cancelled event remains available with CANCELLED status', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().data.status).to.eql('CANCELLED'); });"]}}]
+    },
+    {
+      "name": "17 - Final unread count",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/notifications/unread-count", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications", "unread-count"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Cancellation adds one unread notification', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().data).to.eql(2); });"]}}]
+    }
+  ]
+}

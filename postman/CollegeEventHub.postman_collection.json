@@ -1,0 +1,577 @@
+{
+  "info": {
+    "name": "College Event Hub - Event and Registration API",
+    "description": "End-to-end API flow for authentication, organizations, events, and registrations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Register leader",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{leaderUsername}}\",\n  \"email\": \"{{leaderEmail}}\",\n  \"password\": \"{{leaderPassword}}\",\n  \"firstName\": \"Pandu\",\n  \"lastName\": \"Leader\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "register"]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const suffix = Date.now().toString();",
+              "pm.environment.set('leaderUsername', `leader_${suffix}`);",
+              "pm.environment.set('leaderEmail', `leader_${suffix}@example.com`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Leader registered', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Login leader",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{leaderUsername}}\",\n  \"password\": \"{{leaderPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Leader login succeeded', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.environment.set('leaderToken', body.data.token);",
+              "pm.environment.set('token', body.data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02a - Get my notifications",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/notifications",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "notifications"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Notifications fetched', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Notifications response contains an array', () => pm.expect(body.data).to.be.an('array'));"]}}]
+    },
+    {
+      "name": "02b - Get unread notification count",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/notifications/unread-count",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "notifications", "unread-count"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unread count fetched', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Unread count response is a number', () => pm.expect(body.data).to.be.a('number'));"]}}]
+    },
+    {
+      "name": "03 - Create organization",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Coding Club {{leaderUsername}}\",\n  \"description\": \"Programming organization\",\n  \"email\": \"{{leaderEmail}}\",\n  \"phoneNumber\": \"1234567890\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/organizations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "organizations"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Organization created', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.environment.set('organizationId', body.data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Create event",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Java Workshop {{leaderUsername}}\",\n  \"description\": \"Learn Java and Spring Boot\",\n  \"eventDate\": \"2027-09-15\",\n  \"startTime\": \"10:00:00\",\n  \"endTime\": \"13:00:00\",\n  \"venue\": \"Seminar Hall\",\n  \"capacity\": 100,\n  \"registrationDeadline\": \"2027-09-14T23:59:00\",\n  \"type\": \"OFFLINE\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "organizations", "{{organizationId}}", "events"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Event created', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.environment.set('eventId', body.data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Get all events",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified student is blocked from listing events', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
+    },
+    {
+      "name": "06 - Get event by ID",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events/{{eventId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events", "{{eventId}}"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified student is blocked from event details', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
+    },
+    {
+      "name": "07 - Get organization events",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "organizations", "{{organizationId}}", "events"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organization events fetched', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "08 - Unverified leader cannot register for event",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events/{{eventId}}/registrations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events", "{{eventId}}", "registrations"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified leader is blocked from RSVP', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
+    },
+    {
+      "name": "09 - Get my registrations",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/registrations/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "registrations", "me"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified leader is blocked from viewing own registrations', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
+    },
+    {
+      "name": "10 - Unverified leader RSVP remains blocked",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events/{{eventId}}/registrations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events", "{{eventId}}", "registrations"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified leader is blocked from RSVP', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
+    },
+    {
+      "name": "11 - Get event registrations as leader",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events/{{eventId}}/registrations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events", "{{eventId}}", "registrations"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Participants fetched by leader', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "12 - Register student",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"{{studentPassword}}\",\n  \"firstName\": \"Rahul\",\n  \"lastName\": \"Student\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"]}
+      },
+      "event": [
+        {"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["const suffix = Date.now().toString();", "pm.environment.set('studentUsername', `student_${suffix}`);", "pm.environment.set('studentEmail', `student_${suffix}@example.com`);"]}},
+        {"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student registered', () => pm.response.to.have.status(201));"]}}
+      ]
+    },
+    {
+      "name": "13 - Login student",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"password\": \"{{studentPassword}}\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student login succeeded', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.environment.set('studentToken', body.data.token);"]}}]
+    },
+    {
+      "name": "13a - Unverified student cannot view event details",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events/{{eventId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events", "{{eventId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Unverified student receives 403 for event details', () => pm.response.to.have.status(403));",
+              "pm.test('Student profile verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13b - Verify student profile",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rollNumber\": \"{{studentRollNumber}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/me/verify-student",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "me", "verify-student"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Student profile verification returns HTTP 200', () => {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    const profile = response.data;",
+              "",
+              "    pm.test('Student profile is verified', () => {",
+              "        pm.expect(profile.profileVerified).to.eql(true);",
+              "    });",
+              "",
+              "    pm.test('Correct synthetic roll number is linked', () => {",
+              "        pm.expect(profile.rollNumber)",
+              "            .to.eql(pm.environment.get('studentRollNumber'));",
+              "    });",
+              "",
+              "    pm.test('Student branch is correct', () => {",
+              "        pm.expect(profile.branch).to.eql('CSE');",
+              "    });",
+              "",
+              "    pm.test('Academic year is correct', () => {",
+              "        pm.expect(profile.academicYear).to.eql(2027);",
+              "    });",
+              "",
+              "    pm.test('Section is correct', () => {",
+              "        pm.expect(profile.section).to.eql('A');",
+              "    });",
+              "",
+              "    pm.test('College email is correct', () => {",
+              "        pm.expect(profile.collegeEmail)",
+              "            .to.eql('newman.test.student@example.com');",
+              "    });",
+              "",
+              "    pm.environment.set('studentProfileVerified', profile.profileVerified);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13c - Verified student can view event details",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/events/{{eventId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "events", "{{eventId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Verified student can view event details', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 - Reduce capacity to one",
+      "request": {
+        "method": "PUT",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"Java Workshop {{leaderUsername}}\",\n  \"description\": \"Learn Java and Spring Boot\",\n  \"eventDate\": \"2027-09-15\",\n  \"startTime\": \"10:00:00\",\n  \"endTime\": \"13:00:00\",\n  \"venue\": \"Seminar Hall\",\n  \"capacity\": 1,\n  \"registrationDeadline\": \"2027-09-14T23:59:00\",\n  \"type\": \"OFFLINE\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Capacity updated', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "15 - Verified student registers for event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "POST",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}/registrations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}", "registrations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Verified student registers successfully', () => pm.response.to.have.status(201));", "const registration = pm.response.json().data;", "pm.test('Registration is for the requested event', () => pm.expect(String(registration.eventId)).to.eql(String(pm.environment.get('eventId'))));"]}}]
+    },
+    {
+      "name": "16 - Unauthorized event update rejected",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "PUT",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"Unauthorized update\",\n  \"description\": \"Should fail\",\n  \"eventDate\": \"2027-09-15\",\n  \"startTime\": \"10:00:00\",\n  \"endTime\": \"13:00:00\",\n  \"venue\": \"Seminar Hall\",\n  \"capacity\": 1,\n  \"registrationDeadline\": \"2027-09-14T23:59:00\",\n  \"type\": \"OFFLINE\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unauthorized update rejected', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"]}}]
+    },
+    {
+      "name": "17 - Non-leader cannot view registrations",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}/registrations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}", "registrations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Non-leader access rejected', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "18 - Cancel leader registration",
+      "request": {
+        "method": "DELETE",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}/registrations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}", "registrations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified leader cannot cancel registrations', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
+    },
+    {
+      "name": "19 - Cancel missing registration rejected",
+      "request": {
+        "method": "DELETE",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}/registrations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}", "registrations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified leader is blocked before registration lookup', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
+    },
+    {
+      "name": "20 - Registration removed after cancellation",
+      "request": {
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/registrations/me", "host": ["{{baseUrl}}"], "path": ["api", "v1", "registrations", "me"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified leader is blocked from viewing own registrations', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
+    },
+    {
+      "name": "21 - Unknown event rejected",
+      "request": {
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/999999", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "999999"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified student is blocked before event lookup', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
+    },
+    {
+      "name": "22 - Delete event",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{leaderToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Event deleted', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "23 - Get deleted event by ID",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{eventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Deleted event cannot be accessed', () => pm.response.to.have.status(404));"]}}]
+    },
+    {
+      "name": "24 - Get all events after deletion",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('All events request succeeded', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Deleted event is absent from all events', () => {", "  pm.expect(body.data).to.be.an('array');", "  pm.expect(body.data.some(event => String(event.id) === String(pm.environment.get('eventId')))).to.eql(false);", "});"]}}]
+    }
+  ]
+}
