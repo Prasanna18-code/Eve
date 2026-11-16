@@ -115,7 +115,7 @@
           "path": ["api", "v1", "notifications"]
         }
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Notifications fetched', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Notifications response contains an array', () => pm.expect(body.data).to.be.an('array'));"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Notifications fetched', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Notifications response contains a paginated array', () => pm.expect(body.data.content).to.be.an('array'));"]}}]
     },
     {
       "name": "02b - Get unread notification count",

@@ -7,7 +7,9 @@ import com.collegeeventhub.event.repository.EventRepository;
 import com.collegeeventhub.notification.dto.NotificationPageResponse;
 import com.collegeeventhub.notification.dto.NotificationResponse;
 import com.collegeeventhub.notification.entity.NotificationEntity;
+import com.collegeeventhub.notification.entity.NotificationPreferenceEntity;
 import com.collegeeventhub.notification.mapper.NotificationMapper;
+import com.collegeeventhub.notification.repository.NotificationPreferenceRepository;
 import com.collegeeventhub.notification.repository.NotificationRepository;
 import com.collegeeventhub.user.entity.UserEntity;
 import com.collegeeventhub.user.repository.UserRepository;
@@ -18,6 +20,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -46,6 +50,9 @@ class NotificationServiceImplTest {
 
     @Mock
     private NotificationRepository notificationRepository;
+
+    @Mock
+    private NotificationPreferenceRepository preferenceRepository;
 
     @Mock
     private NotificationMapper notificationMapper;
@@ -251,6 +258,7 @@ class NotificationServiceImplTest {
         );
         assertFalse(saved.getRead());
         verifyNoInteractions(eventRepository);
+        verify(preferenceRepository).findByUserId(1L);
     }
 
     @Test
@@ -283,6 +291,73 @@ class NotificationServiceImplTest {
         );
         assertEquals(NotificationType.EVENT_UPDATED, saved.getType());
         assertFalse(saved.getRead());
+        assertSame(event, saved.getEvent());
+        verify(preferenceRepository).findByUserId(1L);
+    }
+
+    @ParameterizedTest
+    @EnumSource(NotificationType.class)
+    void createNotificationSkipsWhenTypeIsDisabled(NotificationType type) {
+        UserEntity user = mockUser(1L);
+        NotificationPreferenceEntity preferences = disabledPreference(type);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(preferenceRepository.findByUserId(1L))
+                .thenReturn(Optional.of(preferences));
+
+        notificationService.createNotification(
+                1L,
+                "Title",
+                "Message",
+                type
+        );
+
+        verify(notificationRepository, never()).save(any());
+        verifyNoInteractions(eventRepository);
+    }
+
+    @ParameterizedTest
+    @EnumSource(NotificationType.class)
+    void createNotificationSavesWhenTypeIsEnabled(NotificationType type) {
+        UserEntity user = mockUser(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(preferenceRepository.findByUserId(1L))
+                .thenReturn(Optional.of(enabledPreference()));
+
+        notificationService.createNotification(
+                1L,
+                "Title",
+                "Message",
+                type
+        );
+
+        ArgumentCaptor<NotificationEntity> captor =
+                ArgumentCaptor.forClass(NotificationEntity.class);
+        verify(notificationRepository).save(captor.capture());
+        assertSame(user, captor.getValue().getUser());
+        assertEquals(type, captor.getValue().getType());
+        assertFalse(captor.getValue().getRead());
+        verifyNoInteractions(eventRepository);
+    }
+
+    @ParameterizedTest
+    @EnumSource(NotificationType.class)
+    void createNotificationWithoutPreferenceRecordRemainsEnabled(
+            NotificationType type) {
+        UserEntity user = mockUser(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(preferenceRepository.findByUserId(1L))
+                .thenReturn(Optional.empty());
+
+        notificationService.createNotification(
+                1L,
+                "Title",
+                "Message",
+                type
+        );
+
+        verify(notificationRepository).save(any(NotificationEntity.class));
+        verify(preferenceRepository).findByUserId(1L);
+        verify(preferenceRepository, never()).save(any());
     }
 
     @Test
@@ -321,5 +396,26 @@ class NotificationServiceImplTest {
         );
 
         verify(notificationRepository, never()).save(any());
+    }
+
+    private NotificationPreferenceEntity enabledPreference() {
+        return NotificationPreferenceEntity.builder()
+                .registrationSuccessful(true)
+                .eventUpdated(true)
+                .eventCancelled(true)
+                .eventReminder(true)
+                .build();
+    }
+
+    private NotificationPreferenceEntity disabledPreference(
+            NotificationType type) {
+        return NotificationPreferenceEntity.builder()
+                .registrationSuccessful(
+                        type != NotificationType.REGISTRATION_SUCCESSFUL
+                )
+                .eventUpdated(type != NotificationType.EVENT_UPDATED)
+                .eventCancelled(type != NotificationType.EVENT_CANCELLED)
+                .eventReminder(type != NotificationType.EVENT_REMINDER)
+                .build();
     }
 }

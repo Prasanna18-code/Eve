@@ -81,6 +81,17 @@
       "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student login succeeded', () => pm.response.to.have.status(200));", "pm.environment.set('studentToken', pm.response.json().data.token);"]}}]
     },
     {
+      "name": "06a - Verify student profile",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
+        "method": "PUT",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"rollNumber\": \"{{studentRollNumber}}\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/users/me/verify-student", "host": ["{{baseUrl}}"], "path": ["api", "v1", "users", "me", "verify-student"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student profile verified', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
       "name": "07 - Student registers for event",
       "request": {
         "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{studentToken}}", "type": "string"}]},
@@ -96,7 +107,7 @@
         "method": "GET",
         "url": {"raw": "{{baseUrl}}/api/v1/notifications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student notifications fetched', () => pm.response.to.have.status(200));", "const eventId = String(pm.environment.get('eventId'));", "const item = pm.response.json().data.find((notification) => notification.type === 'REGISTRATION_SUCCESSFUL' && String(notification.eventId) === eventId);", "pm.test('Registration notification is unread and event-linked', () => { pm.expect(item).to.exist; if (item) { pm.expect(item.title).to.eql('Registration Successful'); pm.expect(item.read).to.eql(false); pm.environment.set('registrationNotificationId', item.id); } });"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student notifications fetched', () => pm.response.to.have.status(200));", "const eventId = String(pm.environment.get('eventId'));", "const item = pm.response.json().data.content.find((notification) => notification.type === 'REGISTRATION_SUCCESSFUL' && String(notification.eventId) === eventId);", "pm.test('Registration notification is unread and event-linked', () => { pm.expect(item).to.exist; if (item) { pm.expect(item.title).to.eql('Registration Successful'); pm.expect(item.read).to.eql(false); pm.environment.set('registrationNotificationId', item.id); } });"]}}]
     },
     {
       "name": "09 - Leader updates event",
@@ -116,7 +127,7 @@
         "method": "GET",
         "url": {"raw": "{{baseUrl}}/api/v1/notifications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Notifications fetched after update', () => pm.response.to.have.status(200));", "const eventId = String(pm.environment.get('eventId'));", "const item = pm.response.json().data.find((notification) => notification.type === 'EVENT_UPDATED' && String(notification.eventId) === eventId);", "pm.test('Update notification exists and is unread', () => { pm.expect(item).to.exist; if (item) pm.expect(item.read).to.eql(false); });"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Notifications fetched after update', () => pm.response.to.have.status(200));", "const eventId = String(pm.environment.get('eventId'));", "const item = pm.response.json().data.content.find((notification) => notification.type === 'EVENT_UPDATED' && String(notification.eventId) === eventId);", "pm.test('Update notification exists and is unread', () => { pm.expect(item).to.exist; if (item) pm.expect(item.read).to.eql(false); });"]}}]
     },
     {
       "name": "11 - Verify unread count before marking read",
@@ -161,7 +172,7 @@
         "method": "GET",
         "url": {"raw": "{{baseUrl}}/api/v1/notifications", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Notifications fetched after cancellation', () => pm.response.to.have.status(200));", "const eventId = String(pm.environment.get('eventId'));", "const item = pm.response.json().data.find((notification) => notification.type === 'EVENT_CANCELLED' && String(notification.eventId) === eventId);", "pm.test('Cancellation notification exists and is unread', () => { pm.expect(item).to.exist; if (item) pm.expect(item.read).to.eql(false); });"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Notifications fetched after cancellation', () => pm.response.to.have.status(200));", "const eventId = String(pm.environment.get('eventId'));", "const item = pm.response.json().data.content.find((notification) => notification.type === 'EVENT_CANCELLED' && String(notification.eventId) === eventId);", "pm.test('Cancellation notification exists and is unread', () => { pm.expect(item).to.exist; if (item) pm.expect(item.read).to.eql(false); });"]}}]
     },
     {
       "name": "16 - Verify cancelled event remains available",

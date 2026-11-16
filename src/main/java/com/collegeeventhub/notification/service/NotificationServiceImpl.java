@@ -7,7 +7,9 @@ import com.collegeeventhub.event.repository.EventRepository;
 import com.collegeeventhub.notification.dto.NotificationPageResponse;
 import com.collegeeventhub.notification.dto.NotificationResponse;
 import com.collegeeventhub.notification.entity.NotificationEntity;
+import com.collegeeventhub.notification.entity.NotificationPreferenceEntity;
 import com.collegeeventhub.notification.mapper.NotificationMapper;
+import com.collegeeventhub.notification.repository.NotificationPreferenceRepository;
 import com.collegeeventhub.notification.repository.NotificationRepository;
 import com.collegeeventhub.user.entity.UserEntity;
 import com.collegeeventhub.user.repository.UserRepository;
@@ -26,6 +28,7 @@ import java.util.List;
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final NotificationPreferenceRepository preferenceRepository;
     private final NotificationMapper notificationMapper;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
@@ -136,6 +139,13 @@ public class NotificationServiceImpl implements NotificationService {
                                 "User not found with id: " + userId
                         ));
 
+        boolean enabled = preferenceRepository.findByUserId(userId)
+                .map(preferences -> isEnabled(preferences, type))
+                .orElse(true);
+        if (!enabled) {
+            return;
+        }
+
         EventEntity event = null;
         if (eventId != null) {
             event = eventRepository.findById(eventId)
@@ -155,6 +165,17 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
 
         notificationRepository.save(notification);
+    }
+
+    private boolean isEnabled(
+            NotificationPreferenceEntity preferences,
+            NotificationType type) {
+        return switch (type) {
+            case REGISTRATION_SUCCESSFUL -> preferences.isRegistrationSuccessful();
+            case EVENT_UPDATED -> preferences.isEventUpdated();
+            case EVENT_CANCELLED -> preferences.isEventCancelled();
+            case EVENT_REMINDER -> preferences.isEventReminder();
+        };
     }
 
     private UserEntity getUser(String username) {
