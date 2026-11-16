@@ -4,6 +4,7 @@ import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.common.enums.NotificationType;
 import com.collegeeventhub.event.entity.EventEntity;
 import com.collegeeventhub.event.repository.EventRepository;
+import com.collegeeventhub.notification.dto.NotificationPageResponse;
 import com.collegeeventhub.notification.dto.NotificationResponse;
 import com.collegeeventhub.notification.entity.NotificationEntity;
 import com.collegeeventhub.notification.mapper.NotificationMapper;
@@ -12,6 +13,9 @@ import com.collegeeventhub.user.entity.UserEntity;
 import com.collegeeventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,15 +32,34 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<NotificationResponse> getMyNotifications(String username) {
+    public NotificationPageResponse getMyNotifications(
+            String username,
+            int page,
+            int size) {
 
         UserEntity user = getUser(username);
 
-        return notificationRepository
-                .findByUserIdOrderByCreatedAtDesc(user.getId())
-                .stream()
-                .map(notificationMapper::toResponse)
-                .toList();
+        PageRequest pageRequest = PageRequest.of(
+                page,
+                size,
+                Sort.by(
+                        Sort.Order.desc("createdAt"),
+                        Sort.Order.desc("id")
+                )
+        );
+        Page<NotificationEntity> notificationPage =
+                notificationRepository.findByUserId(user.getId(), pageRequest);
+
+        return NotificationPageResponse.builder()
+                .content(notificationPage.getContent().stream()
+                        .map(notificationMapper::toResponse)
+                        .toList())
+                .page(notificationPage.getNumber())
+                .size(notificationPage.getSize())
+                .totalElements(notificationPage.getTotalElements())
+                .totalPages(notificationPage.getTotalPages())
+                .last(notificationPage.isLast())
+                .build();
     }
 
     @Override

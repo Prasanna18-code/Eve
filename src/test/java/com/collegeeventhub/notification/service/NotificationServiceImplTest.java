@@ -4,12 +4,18 @@ import com.collegeeventhub.common.enums.NotificationType;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.event.entity.EventEntity;
 import com.collegeeventhub.event.repository.EventRepository;
+import com.collegeeventhub.notification.dto.NotificationPageResponse;
 import com.collegeeventhub.notification.dto.NotificationResponse;
 import com.collegeeventhub.notification.entity.NotificationEntity;
 import com.collegeeventhub.notification.mapper.NotificationMapper;
 import com.collegeeventhub.notification.repository.NotificationRepository;
 import com.collegeeventhub.user.entity.UserEntity;
 import com.collegeeventhub.user.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -32,6 +38,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,23 +74,36 @@ class NotificationServiceImplTest {
     }
 
     @Test
-    void getMyNotificationsReturnsUsersNotifications() {
+    void getMyNotificationsReturnsPageForAuthenticatedUserWithStableSort() {
         UserEntity user = mockUser(1L);
         NotificationEntity notification = mockNotification(user);
         NotificationResponse response = mock(NotificationResponse.class);
+        Pageable pageable = PageRequest.of(
+                0,
+                10,
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
+        );
+        Page<NotificationEntity> notificationPage =
+                new PageImpl<>(List.of(notification), pageable, 21);
 
         when(userRepository.findByUsername("student1"))
                 .thenReturn(Optional.of(user));
-        when(notificationRepository.findByUserIdOrderByCreatedAtDesc(1L))
-                .thenReturn(List.of(notification));
+        when(notificationRepository.findByUserId(1L, pageable))
+                .thenReturn(notificationPage);
         when(notificationMapper.toResponse(notification))
                 .thenReturn(response);
 
-        List<NotificationResponse> result =
-                notificationService.getMyNotifications("student1");
+        NotificationPageResponse result =
+                notificationService.getMyNotifications("student1", 0, 10);
 
-        assertEquals(1, result.size());
-        assertSame(response, result.get(0));
+        assertEquals(List.of(response), result.getContent());
+        assertEquals(0, result.getPage());
+        assertEquals(10, result.getSize());
+        assertEquals(21, result.getTotalElements());
+        assertEquals(3, result.getTotalPages());
+        assertFalse(result.isLast());
+        verify(notificationRepository).findByUserId(1L, pageable);
+        verifyNoMoreInteractions(notificationRepository);
         verify(notificationMapper).toResponse(notification);
     }
 
@@ -94,10 +114,29 @@ class NotificationServiceImplTest {
 
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> notificationService.getMyNotifications("missing")
+                () -> notificationService.getMyNotifications("missing", 0, 10)
         );
 
         verifyNoInteractions(notificationRepository);
+    }
+
+    @Test
+    void getMyNotificationsUsesOnlyTheAuthenticatedUsersId() {
+        UserEntity user = mockUser(1L);
+        when(userRepository.findByUsername("student1"))
+                .thenReturn(Optional.of(user));
+        when(notificationRepository.findByUserId(
+                org.mockito.ArgumentMatchers.eq(1L),
+                any(Pageable.class)
+        )).thenReturn(Page.empty());
+
+        notificationService.getMyNotifications("student1", 2, 5);
+
+        verify(notificationRepository).findByUserId(
+                org.mockito.ArgumentMatchers.eq(1L),
+                any(Pageable.class)
+        );
+        verifyNoMoreInteractions(notificationRepository);
     }
 
     @Test

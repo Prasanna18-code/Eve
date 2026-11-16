@@ -1,13 +1,11 @@
 package com.collegeeventhub.notification.service;
 
 import com.collegeeventhub.common.enums.NotificationType;
-import com.collegeeventhub.notification.dto.NotificationResponse;
-
-import java.util.List;
+import com.collegeeventhub.notification.dto.NotificationPageResponse;
 
 public interface NotificationService {
 
-    List<NotificationResponse> getMyNotifications(String username);
+    NotificationPageResponse getMyNotifications(String username, int page, int size);
 
     long getUnreadCount(String username);
 
