@@ -53,11 +53,16 @@ class EventServiceProfileVerificationTest {
     @Mock
     private StudentProfileVerificationGuard studentProfileVerificationGuard;
 
+    @Mock
+    private EventEligibilityService eventEligibilityService;
+
     @InjectMocks
     private EventServiceImpl eventService;
 
     @Test
     void eventReadOperationsCheckStudentProfileVerification() {
+        when(studentProfileVerificationGuard.checkAuthenticatedUser())
+                .thenReturn(UserEntity.builder().role(Role.CLUB_ADMIN).build());
         when(eventRepository
                 .findByEventDateGreaterThanEqualAndStatusNotInOrderByEventDateAsc(
                         org.mockito.ArgumentMatchers.any(LocalDate.class),

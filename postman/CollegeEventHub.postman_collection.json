@@ -222,18 +222,6 @@
       "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Unverified student is blocked from event details', () => pm.response.to.have.status(403));", "pm.test('Verification message is returned', () => pm.expect(pm.response.json().message).to.eql('Please verify your student profile before accessing student events.'));"]}}]
     },
     {
-      "name": "07 - Get organization events",
-      "request": {
-        "method": "GET",
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/events",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "v1", "organizations", "{{organizationId}}", "events"]
-        }
-      },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organization events fetched', () => pm.response.to.have.status(200));"]}}]
-    },
-    {
       "name": "08 - Unverified leader cannot register for event",
       "request": {
         "method": "POST",
@@ -304,7 +292,7 @@
         "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"password\": \"{{studentPassword}}\"\n}"},
         "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student login succeeded', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.environment.set('studentToken', body.data.token);"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Student login succeeded', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.environment.set('studentToken', body.data.token);", "pm.environment.set('cseStudentToken', body.data.token);"]}}]
     },
     {
       "name": "13a - Unverified student cannot view event details",
@@ -415,6 +403,28 @@
           }
         }
       ]
+    },
+    {
+      "name": "07 - Get organization events",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{studentToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/events",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "organizations", "{{organizationId}}", "events"]
+        }
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organization events fetched', () => pm.response.to.have.status(200));"]}}]
     },
     {
       "name": "13c - Verified student can view event details",
@@ -572,6 +582,172 @@
         "url": {"raw": "{{baseUrl}}/api/v1/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events"]}
       },
       "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('All events request succeeded', () => pm.response.to.have.status(200));", "const body = pm.response.json();", "pm.test('Deleted event is absent from all events', () => {", "  pm.expect(body.data).to.be.an('array');", "  pm.expect(body.data.some(event => String(event.id) === String(pm.environment.get('eventId')))).to.eql(false);", "});"]}}]
+    },
+    {
+      "name": "25 - Create CSE-targeted event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"CSE Audience Workshop {{leaderUsername}}\",\n  \"description\": \"Audience eligibility test event\",\n  \"eventDate\": \"2027-10-15\",\n  \"startTime\": \"10:00:00\",\n  \"endTime\": \"12:00:00\",\n  \"venue\": \"Seminar Hall\",\n  \"capacity\": 100,\n  \"registrationDeadline\": \"2027-10-14T23:59:00\",\n  \"type\": \"OFFLINE\",\n  \"eligibleBranches\": [\"CSE\"],\n  \"eligibleAcademicYears\": [2027],\n  \"eligibleSections\": [\"A\"]\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations", "{{organizationId}}", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('CSE-targeted event created', () => pm.response.to.have.status(201));", "const event = pm.response.json().data;", "pm.environment.set('targetedEventId', event.id);", "pm.test('CSE targeting is stored', () => pm.expect(event.eligibleBranches).to.include('CSE'));"]}}]
+    },
+    {
+      "name": "26 - Register second student",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{eceStudentUsername}}\",\n  \"email\": \"{{eceStudentEmail}}\",\n  \"password\": \"{{studentPassword}}\",\n  \"firstName\": \"Newman\",\n  \"lastName\": \"Student Two\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"]}
+      },
+      "event": [
+        {"listen": "prerequest", "script": {"type": "text/javascript", "exec": ["const suffix = Date.now().toString();", "pm.environment.set('eceStudentUsername', `ece_student_${suffix}`);", "pm.environment.set('eceStudentEmail', `ece_student_${suffix}@example.com`);"]}},
+        {"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Second student registered', () => pm.response.to.have.status(201));"]}}
+      ]
+    },
+    {
+      "name": "27 - Login second student",
+      "request": {
+        "auth": {"type": "noauth"},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"{{eceStudentUsername}}\",\n  \"password\": \"{{studentPassword}}\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Second student login succeeded', () => pm.response.to.have.status(200));", "pm.environment.set('eceStudentToken', pm.response.json().data.token);"]}}]
+    },
+    {
+      "name": "28 - Verify second student profile",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{eceStudentToken}}", "type": "string"}]},
+        "method": "PUT",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"rollNumber\": \"{{eceStudentRollNumber}}\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/users/me/verify-student", "host": ["{{baseUrl}}"], "path": ["api", "v1", "users", "me", "verify-student"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Second student profile verification succeeded', () => pm.response.to.have.status(200));", "const profile = pm.response.json().data;", "pm.test('Second account uses the ECE directory fixture', () => {", "  pm.expect(profile.profileVerified).to.eql(true);", "  pm.expect(profile.rollNumber).to.eql(pm.environment.get('eceStudentRollNumber'));", "  pm.expect(profile.branch).to.eql('ECE');", "  pm.expect(profile.academicYear).to.eql(2027);", "  pm.expect(profile.section).to.eql('B');", "});"]}}]
+    },
+    {
+      "name": "29 - CSE student sees targeted event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{cseStudentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('CSE student can list events', () => pm.response.to.have.status(200));", "const events = pm.response.json().data;", "pm.test('CSE student sees the CSE-targeted event', () => pm.expect(events.some(event => String(event.id) === String(pm.environment.get('targetedEventId')))).to.eql(true));"]}}]
+    },
+    {
+      "name": "30 - ECE student does not see targeted event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{eceStudentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('ECE student can list eligible events', () => pm.response.to.have.status(200));", "const events = pm.response.json().data;", "pm.test('ECE student does not see the CSE-targeted event', () => pm.expect(events.some(event => String(event.id) === String(pm.environment.get('targetedEventId')))).to.eql(false));"]}}]
+    },
+    {
+      "name": "31 - ECE student cannot access targeted event details",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{eceStudentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{targetedEventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{targetedEventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('ECE student receives 403 for targeted event details', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "32 - ECE student cannot RSVP to targeted event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{eceStudentToken}}", "type": "string"}]},
+        "method": "POST",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{targetedEventId}}/registrations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{targetedEventId}}", "registrations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('ECE student receives 403 when RSVPing to targeted event', () => pm.response.to.have.status(403));"]}}]
+    },
+    {
+      "name": "33 - CSE student RSVPs to targeted event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{cseStudentToken}}", "type": "string"}]},
+        "method": "POST",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{targetedEventId}}/registrations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{targetedEventId}}", "registrations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('CSE student registers for targeted event', () => pm.response.to.have.status(201));"]}}]
+    },
+    {
+      "name": "34 - Create college-wide event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"title\": \"College-wide Workshop {{leaderUsername}}\",\n  \"description\": \"Unrestricted audience eligibility test event\",\n  \"eventDate\": \"2027-10-16\",\n  \"startTime\": \"10:00:00\",\n  \"endTime\": \"12:00:00\",\n  \"venue\": \"Main Auditorium\",\n  \"capacity\": 100,\n  \"registrationDeadline\": \"2027-10-15T23:59:00\",\n  \"type\": \"OFFLINE\",\n  \"eligibleBranches\": [],\n  \"eligibleAcademicYears\": [],\n  \"eligibleSections\": []\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations", "{{organizationId}}", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('College-wide event created', () => pm.response.to.have.status(201));", "const event = pm.response.json().data;", "pm.environment.set('collegeWideEventId', event.id);", "pm.test('All eligibility criteria are empty', () => {", "  pm.expect(event.eligibleBranches).to.be.empty;", "  pm.expect(event.eligibleAcademicYears).to.be.empty;", "  pm.expect(event.eligibleSections).to.be.empty;", "});"]}}]
+    },
+    {
+      "name": "35 - CSE student sees college-wide event in listing",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{cseStudentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('CSE student can list college-wide events', () => pm.response.to.have.status(200));", "const events = pm.response.json().data;", "pm.test('CSE student sees college-wide event', () => pm.expect(events.some(event => String(event.id) === String(pm.environment.get('collegeWideEventId')))).to.eql(true));"]}}]
+    },
+    {
+      "name": "36 - ECE student sees college-wide event in listing",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{eceStudentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('ECE student can list college-wide events', () => pm.response.to.have.status(200));", "const events = pm.response.json().data;", "pm.test('ECE student sees college-wide event', () => pm.expect(events.some(event => String(event.id) === String(pm.environment.get('collegeWideEventId')))).to.eql(true));"]}}]
+    },
+    {
+      "name": "37 - CSE student can access college-wide event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{cseStudentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{collegeWideEventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{collegeWideEventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('CSE student can access college-wide event details', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "38 - ECE student can access college-wide event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{eceStudentToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{collegeWideEventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{collegeWideEventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('ECE student can access college-wide event details', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "39 - Cancel eligibility test registration",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{cseStudentToken}}", "type": "string"}]},
+        "method": "DELETE",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{targetedEventId}}/registrations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{targetedEventId}}", "registrations"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Eligibility test registration cancelled', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "40 - Delete CSE-targeted test event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "DELETE",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{targetedEventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{targetedEventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('CSE-targeted test event soft-deleted', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "41 - Delete college-wide test event",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "DELETE",
+        "url": {"raw": "{{baseUrl}}/api/v1/events/{{collegeWideEventId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "events", "{{collegeWideEventId}}"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('College-wide test event soft-deleted', () => pm.response.to.have.status(200));"]}}]
     }
   ]
 }

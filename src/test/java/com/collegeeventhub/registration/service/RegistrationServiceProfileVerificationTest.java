@@ -6,6 +6,7 @@ import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.common.security.StudentProfileVerificationGuard;
 import com.collegeeventhub.event.entity.EventEntity;
 import com.collegeeventhub.event.repository.EventRepository;
+import com.collegeeventhub.event.service.EventEligibilityService;
 import com.collegeeventhub.notification.service.NotificationService;
 import com.collegeeventhub.registration.dto.RegistrationResponse;
 import com.collegeeventhub.registration.entity.RegistrationEntity;
@@ -57,7 +58,8 @@ class RegistrationServiceProfileVerificationTest {
                 userRepository,
                 eventRepository,
                 notificationService,
-                new StudentProfileVerificationGuard(userRepository)
+                new StudentProfileVerificationGuard(userRepository),
+                new EventEligibilityService()
         );
     }
 

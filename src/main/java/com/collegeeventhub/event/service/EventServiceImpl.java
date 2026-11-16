@@ -15,6 +15,7 @@ import com.collegeeventhub.organization.repository.OrganizationRepository;
 import com.collegeeventhub.registration.entity.RegistrationEntity;
 import com.collegeeventhub.registration.repository.RegistrationRepository;
 import com.collegeeventhub.user.repository.UserRepository;
+import com.collegeeventhub.user.entity.UserEntity;
 
 import lombok.RequiredArgsConstructor;
 
@@ -33,10 +34,11 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final EventMapper eventMapper;
     private final OrganizationRepository organizationRepository;
-        private final UserRepository userRepository;
-        private final RegistrationRepository registrationRepository;
-        private final NotificationService notificationService;
-        private final StudentProfileVerificationGuard studentProfileVerificationGuard;
+    private final UserRepository userRepository;
+    private final RegistrationRepository registrationRepository;
+    private final NotificationService notificationService;
+    private final StudentProfileVerificationGuard studentProfileVerificationGuard;
+    private final EventEligibilityService eventEligibilityService;
 
     @Override
     public EventResponse createEvent(
@@ -62,9 +64,10 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventResponse> getAllEvents() {
 
-        studentProfileVerificationGuard.checkAuthenticatedUser();
+        UserEntity user = studentProfileVerificationGuard.checkAuthenticatedUser();
 
         return eventRepository
                 .findByEventDateGreaterThanEqualAndStatusNotInOrderByEventDateAsc(
@@ -72,14 +75,16 @@ public class EventServiceImpl implements EventService {
                         List.of(EventStatus.CANCELLED, EventStatus.DELETED)
                 )
                 .stream()
+                .filter(event -> eventEligibilityService.isEligible(user, event))
                 .map(eventMapper::toResponse)
                 .toList();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventResponse> getCancelledEvents() {
 
-        studentProfileVerificationGuard.checkAuthenticatedUser();
+        UserEntity user = studentProfileVerificationGuard.checkAuthenticatedUser();
 
         return eventRepository
                 .findByEventDateGreaterThanEqualAndStatusOrderByEventDateAsc(
@@ -87,14 +92,16 @@ public class EventServiceImpl implements EventService {
                         EventStatus.CANCELLED
                 )
                 .stream()
+                .filter(event -> eventEligibilityService.isEligible(user, event))
                 .map(eventMapper::toResponse)
                 .toList();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EventResponse getEventById(Long id) {
 
-        studentProfileVerificationGuard.checkAuthenticatedUser();
+        UserEntity user = studentProfileVerificationGuard.checkAuthenticatedUser();
 
         EventEntity event =
                 eventRepository.findByIdAndStatusNot(id, EventStatus.DELETED)
@@ -102,12 +109,16 @@ public class EventServiceImpl implements EventService {
                                 new ResourceNotFoundException(
                                         "Event not found with id: " + id));
 
+        eventEligibilityService.checkEligible(user, event);
         return eventMapper.toResponse(event);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventResponse> getEventsByOrganization(
             Long organizationId) {
+
+        UserEntity user = studentProfileVerificationGuard.checkAuthenticatedUser();
 
         if (!organizationRepository.existsById(organizationId)) {
             throw new ResourceNotFoundException(
@@ -119,6 +130,7 @@ public class EventServiceImpl implements EventService {
                         EventStatus.DELETED
                 )
                 .stream()
+                .filter(event -> eventEligibilityService.isEligible(user, event))
                 .map(eventMapper::toResponse)
                 .toList();
     }

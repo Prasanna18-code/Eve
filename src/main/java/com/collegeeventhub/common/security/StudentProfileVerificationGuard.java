@@ -19,7 +19,7 @@ public class StudentProfileVerificationGuard {
 
     private final UserRepository userRepository;
 
-    public void checkAuthenticatedUser() {
+    public UserEntity checkAuthenticatedUser() {
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
@@ -32,6 +32,7 @@ public class StudentProfileVerificationGuard {
                         new ResourceNotFoundException("User not found"));
 
         checkUser(user);
+        return user;
     }
 
     public void checkUser(UserEntity user) {

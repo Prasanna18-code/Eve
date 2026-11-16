@@ -5,6 +5,7 @@ import com.collegeeventhub.common.enums.NotificationType;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.common.security.StudentProfileVerificationGuard;
 import com.collegeeventhub.event.entity.EventEntity;
+import com.collegeeventhub.event.service.EventEligibilityService;
 import com.collegeeventhub.event.repository.EventRepository;
 import com.collegeeventhub.notification.service.NotificationService;
 import com.collegeeventhub.registration.dto.RegistrationResponse;
@@ -29,11 +30,12 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final RegistrationMapper registrationMapper;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
-        private final NotificationService notificationService;
+    private final NotificationService notificationService;
     private final StudentProfileVerificationGuard studentProfileVerificationGuard;
+    private final EventEligibilityService eventEligibilityService;
 
     @Override
-        @Transactional
+    @Transactional
     public RegistrationResponse registerForEvent(
             Long eventId,
             String username
@@ -51,6 +53,8 @@ public class RegistrationServiceImpl implements RegistrationService {
                 )
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Event not found"));
+
+        eventEligibilityService.checkEligible(user, event);
 
         if (registrationRepository.existsByUserIdAndEventId(
                 user.getId(),
