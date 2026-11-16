@@ -2,6 +2,7 @@ package com.collegeeventhub.registration.service;
 
 import com.collegeeventhub.common.enums.Role;
 import com.collegeeventhub.common.enums.EventStatus;
+import com.collegeeventhub.common.enums.NotificationType;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.common.security.StudentProfileVerificationGuard;
 import com.collegeeventhub.event.entity.EventEntity;
@@ -118,6 +119,13 @@ class RegistrationServiceProfileVerificationTest {
 
         assertNotNull(response);
         verify(registrationRepository).save(any(RegistrationEntity.class));
+        verify(notificationService).createNotification(
+                1L,
+                2L,
+                "Registration Successful",
+                "You have successfully registered for Campus event",
+                NotificationType.REGISTRATION_SUCCESSFUL
+        );
     }
 
     @Test

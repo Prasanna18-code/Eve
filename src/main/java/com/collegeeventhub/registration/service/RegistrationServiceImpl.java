@@ -83,6 +83,7 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         notificationService.createNotification(
                 user.getId(),
+                event.getId(),
                 "Registration Successful",
                 "You have successfully registered for " + event.getTitle(),
                 NotificationType.REGISTRATION_SUCCESSFUL

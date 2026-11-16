@@ -11,6 +11,7 @@ public class NotificationMapper {
 
         return NotificationResponse.builder()
                 .id(entity.getId())
+                .eventId(entity.getEvent() == null ? null : entity.getEvent().getId())
                 .title(entity.getTitle())
                 .message(entity.getMessage())
                 .type(entity.getType())
