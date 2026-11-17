@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -70,6 +71,77 @@ class UserServiceImplTest {
 
         request = new VerifyStudentRequest();
         request.setRollNumber("1MS23CS132");
+    }
+
+    @Test
+    void getUserByIdAllowsRequesterToReadOwnProfile() {
+        UserResponse response = UserResponse.builder()
+                .id(42L)
+                .username("student42")
+                .build();
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+        when(userMapper.toResponse(user)).thenReturn(response);
+
+        UserResponse result = userService.getUserById(42L, 42L, false);
+
+        assertEquals(response, result);
+        verify(userMapper).toResponse(user);
+    }
+
+    @Test
+    void getUserByIdDeniesNonAdminRequesterForAnotherProfile() {
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> userService.getUserById(42L, 75L, false)
+        );
+
+        verifyNoInteractions(userMapper);
+    }
+
+    @Test
+    void getUserByIdAllowsAdminToReadAnotherProfile() {
+        UserResponse response = UserResponse.builder()
+                .id(42L)
+                .username("student42")
+                .build();
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+        when(userMapper.toResponse(user)).thenReturn(response);
+
+        UserResponse result = userService.getUserById(42L, 75L, true);
+
+        assertEquals(response, result);
+        verify(userMapper).toResponse(user);
+    }
+
+    @Test
+    void getUserByIdPreservesNotFoundForNonexistentProfile() {
+        when(userRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> userService.getUserById(404L, 42L, false)
+        );
+
+        verifyNoInteractions(userMapper);
+    }
+
+    @Test
+    void getUserByIdDeniesDifferentUserWithDuplicateUsername() {
+        user.setUsername("sharedUsername");
+        UserEntity requester = UserEntity.builder()
+                .id(75L)
+                .username("sharedUsername")
+                .build();
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> userService.getUserById(42L, requester.getId(), false)
+        );
+
+        verifyNoInteractions(userMapper);
     }
 
     @Test

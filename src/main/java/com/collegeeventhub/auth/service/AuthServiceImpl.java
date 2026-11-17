@@ -49,7 +49,7 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidCredentialsException("Invalid username or password");
         }
 
-        String token = jwtService.generateToken(user.getUsername());
+        String token = jwtService.generateToken(user.getId(), user.getUsername());
 
         return AuthResponse.builder()
                 .token(token)

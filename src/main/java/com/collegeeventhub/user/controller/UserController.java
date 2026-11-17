@@ -2,10 +2,12 @@ package com.collegeeventhub.user.controller;
 
 import com.collegeeventhub.user.dto.UserResponse;
 import com.collegeeventhub.user.service.UserService;
+import com.collegeeventhub.security.AuthenticatedUserPrincipal;
 
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -90,10 +92,21 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            Authentication authentication) {
+        if (!(authentication.getPrincipal() instanceof AuthenticatedUserPrincipal principal)) {
+            throw new AccessDeniedException(
+                    "Authenticated user identity is unavailable");
+        }
 
         return ResponseEntity.ok(
-                userService.getUserById(id)
+                userService.getUserById(
+                        id,
+                        principal.getId(),
+                        authentication.getAuthorities().stream()
+                                .anyMatch(authority ->
+                                        "ROLE_ADMIN".equals(authority.getAuthority()))
+                )
         );
     }
 }
