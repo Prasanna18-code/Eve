@@ -10,7 +10,7 @@ public interface UserService {
 
     List<UserResponse> getAllUsers();
 
-    UserResponse getUserById(Long id);
+    UserResponse getUserById(Long id, Long requesterUserId, boolean requesterIsAdmin);
 
     UserResponse getCurrentUser(String username);
 

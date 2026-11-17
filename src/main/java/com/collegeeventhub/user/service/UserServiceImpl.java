@@ -13,6 +13,7 @@ import com.collegeeventhub.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,12 +39,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponse getUserById(Long id) {
+    public UserResponse getUserById(
+            Long id,
+            Long requesterUserId,
+            boolean requesterIsAdmin) {
 
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "User not found with id: " + id));
+
+        if (!requesterIsAdmin && !user.getId().equals(requesterUserId)) {
+            throw new AccessDeniedException(
+                    "You are not allowed to access this user profile");
+        }
 
         return userMapper.toResponse(user);
     }

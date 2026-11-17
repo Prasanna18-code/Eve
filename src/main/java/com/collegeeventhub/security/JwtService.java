@@ -22,12 +22,13 @@ public class JwtService {
         this.expiration = expiration;
     }
 
-    public String generateToken(String username) {
+    public String generateToken(Long userId, String username) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("userId", userId.toString())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(signingKey)
@@ -38,29 +39,35 @@ public class JwtService {
         return signingKey;
     }
 
-    public String extractUsername(String token) {
+    public JwtIdentity parseAndValidateToken(String token) {
+        io.jsonwebtoken.Claims claims = parseClaims(token);
+        String username = claims.getSubject();
+        String userId = claims.get("userId", String.class);
+        Date tokenExpiration = claims.getExpiration();
+
+        if (username == null || userId == null || tokenExpiration == null
+                || !tokenExpiration.after(new Date())) {
+            throw new io.jsonwebtoken.JwtException("Invalid JWT claims");
+        }
+
+        try {
+            return new JwtIdentity(Long.parseLong(userId), username);
+        } catch (NumberFormatException exception) {
+            throw new io.jsonwebtoken.JwtException(
+                    "Token contains an invalid user ID",
+                    exception
+            );
+        }
+    }
+
+    private io.jsonwebtoken.Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+                .getPayload();
     }
 
-    public boolean isTokenExpired(String token) {
-        Date expiration = Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getExpiration();
-
-        return expiration.before(new Date());
-    }
-
-    public boolean isTokenValid(String token, String username) {
-        String tokenUsername = extractUsername(token);
-        return tokenUsername.equals(username)
-                && !isTokenExpired(token);
+    public record JwtIdentity(Long userId, String username) {
     }
 }
