@@ -4,5 +4,6 @@ public enum AdminAuditTargetType {
     USER,
     ORGANIZATION,
     CLUB,
-    EVENT
+    EVENT,
+    PLACEMENT
 }
