@@ -1,5 +1,9 @@
 package com.collegeeventhub.admin.service;
 
+import com.collegeeventhub.admin.audit.AdminAuditAction;
+import com.collegeeventhub.admin.audit.AdminAuditTargetType;
+import com.collegeeventhub.admin.audit.entity.AdminAuditLogEntity;
+import com.collegeeventhub.admin.audit.repository.AdminAuditLogRepository;
 import com.collegeeventhub.common.enums.EventStatus;
 import com.collegeeventhub.common.enums.EventType;
 import com.collegeeventhub.common.enums.NotificationType;
@@ -68,6 +72,9 @@ class AdminEventCancellationIntegrationTest {
     private NotificationRepository notificationRepository;
 
     @Autowired
+    private AdminAuditLogRepository adminAuditLogRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Autowired
@@ -77,7 +84,7 @@ class AdminEventCancellationIntegrationTest {
     void adminCancellationUpdatesStatusAndNotifiesEveryRegistrant() {
         Fixture fixture = createFixture(EventStatus.UPCOMING);
 
-        adminEventService.cancelEvent(fixture.event().getId());
+        adminEventService.cancelEvent(fixture.event().getId(), 999L);
 
         entityManager.flush();
         entityManager.clear();
@@ -96,15 +103,23 @@ class AdminEventCancellationIntegrationTest {
                 fixture.secondStudent().getId(),
                 fixture.event().getId()
         );
+        assertAuditLog(
+                fixture.event().getId(),
+                List.of(EventStatus.UPCOMING)
+        );
     }
 
     @Test
     void repeatedAdminCancellationDoesNotDuplicateNotifications() {
         Fixture fixture = createFixture(EventStatus.UPCOMING);
 
-        adminEventService.cancelEvent(fixture.event().getId());
-        adminEventService.cancelEvent(fixture.event().getId());
+        adminEventService.cancelEvent(fixture.event().getId(), 999L);
+        adminEventService.cancelEvent(fixture.event().getId(), 999L);
 
+        assertAuditLog(
+                fixture.event().getId(),
+                List.of(EventStatus.UPCOMING, EventStatus.CANCELLED)
+        );
         assertOneCancellationNotification(
                 fixture.firstStudent().getId(),
                 fixture.event().getId()
@@ -119,9 +134,13 @@ class AdminEventCancellationIntegrationTest {
     void alreadyCancelledEventRemainsCancelledAndDoesNotDuplicateNotifications() {
         Fixture fixture = createFixture(EventStatus.CANCELLED);
 
-        adminEventService.cancelEvent(fixture.event().getId());
-        adminEventService.cancelEvent(fixture.event().getId());
+        adminEventService.cancelEvent(fixture.event().getId(), 999L);
+        adminEventService.cancelEvent(fixture.event().getId(), 999L);
 
+        assertAuditLog(
+                fixture.event().getId(),
+                List.of(EventStatus.CANCELLED, EventStatus.CANCELLED)
+        );
         assertEquals(
                 EventStatus.CANCELLED,
                 eventRepository.findById(fixture.event().getId())
@@ -163,7 +182,7 @@ class AdminEventCancellationIntegrationTest {
         try {
             adminCancellation = executor.submit(() ->
                     transactionTemplate.executeWithoutResult(status -> {
-                        adminEventService.cancelEvent(fixture.event().getId());
+                        adminEventService.cancelEvent(fixture.event().getId(), 999L);
                         firstCancellationFinished.countDown();
                         await(releaseFirstTransaction);
                     }));
@@ -224,6 +243,17 @@ class AdminEventCancellationIntegrationTest {
                                         + "where registration.event.id = :eventId")
                         .setParameter("eventId", fixture.event().getId())
                         .executeUpdate();
+                entityManager.createQuery(
+                                "delete from AdminAuditLogEntity audit "
+                                        + "where audit.adminUserId = :adminUserId "
+                                        + "and audit.action = :action "
+                                        + "and audit.targetType = :targetType "
+                                        + "and audit.targetId = :eventId")
+                        .setParameter("adminUserId", 999L)
+                        .setParameter("action", AdminAuditAction.EVENT_CANCELLED)
+                        .setParameter("targetType", AdminAuditTargetType.EVENT)
+                        .setParameter("eventId", fixture.event().getId())
+                        .executeUpdate();
                 eventRepository.deleteById(fixture.event().getId());
                 organizationRepository.deleteById(
                         fixture.event().getOrganization().getId()
@@ -241,7 +271,7 @@ class AdminEventCancellationIntegrationTest {
     void invalidEventIdReturnsNotFound() {
         ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
-                () -> adminEventService.cancelEvent(Long.MAX_VALUE)
+                () -> adminEventService.cancelEvent(Long.MAX_VALUE, 999L)
         );
 
         assertEquals(
@@ -314,6 +344,26 @@ class AdminEventCancellationIntegrationTest {
                         .toList();
 
         assertEquals(1, cancellationNotifications.size());
+    }
+
+    private void assertAuditLog(
+            Long eventId,
+            List<EventStatus> previousStatuses) {
+        List<AdminAuditLogEntity> logs = adminAuditLogRepository
+                .findByAdminUserIdAndActionAndTargetTypeAndTargetIdOrderByIdAsc(
+                        999L,
+                        AdminAuditAction.EVENT_CANCELLED,
+                        AdminAuditTargetType.EVENT,
+                        eventId
+                );
+        assertEquals(previousStatuses.size(), logs.size());
+        for (int i = 0; i < previousStatuses.size(); i++) {
+            assertEquals(
+                    "status changed from " + previousStatuses.get(i)
+                            + " to " + EventStatus.CANCELLED,
+                    logs.get(i).getDetails()
+            );
+        }
     }
 
     private void await(CountDownLatch latch) {

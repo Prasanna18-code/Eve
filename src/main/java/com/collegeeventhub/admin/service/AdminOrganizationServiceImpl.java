@@ -1,6 +1,9 @@
 package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminOrganizationResponse;
+import com.collegeeventhub.admin.audit.AdminAuditAction;
+import com.collegeeventhub.admin.audit.AdminAuditLogService;
+import com.collegeeventhub.admin.audit.AdminAuditTargetType;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.util.Pagination;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminOrganizationServiceImpl implements AdminOrganizationService {
 
     private final OrganizationRepository organizationRepository;
+    private final AdminAuditLogService adminAuditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -37,33 +41,51 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
         return PageResponse.from(organizations, this::toResponse);
     }
 
-            @Override
-            @Transactional
-            public void activateOrganization(Long organizationId) {
-
-            OrganizationEntity organization =
+    @Override
+    @Transactional
+    public void activateOrganization(
+            Long organizationId,
+            Long adminUserId) {
+        OrganizationEntity organization =
                 organizationRepository.findById(organizationId)
-                    .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                            "Organization not found"));
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Organization not found"));
 
-            organization.setActive(true);
-            organizationRepository.save(organization);
-            }
+        boolean wasActive = Boolean.TRUE.equals(organization.getActive());
+        organization.setActive(true);
+        organizationRepository.save(organization);
+        adminAuditLogService.record(
+                adminUserId,
+                AdminAuditAction.ORGANIZATION_ACTIVATED,
+                AdminAuditTargetType.ORGANIZATION,
+                organizationId,
+                "active changed from " + wasActive + " to true"
+        );
+    }
 
-            @Override
-            @Transactional
-            public void deactivateOrganization(Long organizationId) {
-
-            OrganizationEntity organization =
+    @Override
+    @Transactional
+    public void deactivateOrganization(
+            Long organizationId,
+            Long adminUserId) {
+        OrganizationEntity organization =
                 organizationRepository.findById(organizationId)
-                    .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                            "Organization not found"));
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Organization not found"));
 
-            organization.setActive(false);
-            organizationRepository.save(organization);
-            }
+        boolean wasActive = Boolean.TRUE.equals(organization.getActive());
+        organization.setActive(false);
+        organizationRepository.save(organization);
+        adminAuditLogService.record(
+                adminUserId,
+                AdminAuditAction.ORGANIZATION_DEACTIVATED,
+                AdminAuditTargetType.ORGANIZATION,
+                organizationId,
+                "active changed from " + wasActive + " to false"
+        );
+    }
 
     private AdminOrganizationResponse toResponse(
             OrganizationEntity organization) {

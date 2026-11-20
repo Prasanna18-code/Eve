@@ -2,6 +2,9 @@ package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminUserResponse;
 import com.collegeeventhub.admin.dto.AdminUserPageResponse;
+import com.collegeeventhub.admin.audit.AdminAuditAction;
+import com.collegeeventhub.admin.audit.AdminAuditLogService;
+import com.collegeeventhub.admin.audit.AdminAuditTargetType;
 import com.collegeeventhub.common.enums.Role;
 import com.collegeeventhub.common.exception.BadRequestException;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
@@ -21,6 +24,7 @@ import java.util.List;
 public class AdminUserServiceImpl implements AdminUserService {
 
     private final UserRepository userRepository;
+    private final AdminAuditLogService adminAuditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -57,14 +61,22 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional
-    public void activateUser(Long userId) {
+    public void activateUser(Long userId, Long adminUserId) {
 
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("User not found"));
 
+        boolean wasActive = Boolean.TRUE.equals(user.getActive());
         user.setActive(true);
         userRepository.save(user);
+        adminAuditLogService.record(
+                adminUserId,
+                AdminAuditAction.USER_ACTIVATED,
+                AdminAuditTargetType.USER,
+                userId,
+                "active changed from " + wasActive + " to true"
+        );
     }
 
     @Override
@@ -84,8 +96,16 @@ public class AdminUserServiceImpl implements AdminUserService {
             ensureAnotherActiveAdminRemains();
         }
 
+        boolean wasActive = Boolean.TRUE.equals(user.getActive());
         user.setActive(false);
         userRepository.save(user);
+        adminAuditLogService.record(
+                adminUserId,
+                AdminAuditAction.USER_DEACTIVATED,
+                AdminAuditTargetType.USER,
+                userId,
+                "active changed from " + wasActive + " to false"
+        );
     }
 
     @Override
@@ -109,8 +129,17 @@ public class AdminUserServiceImpl implements AdminUserService {
             ensureAnotherActiveAdminRemains();
         }
 
+        Role previousRole = user.getRole();
         user.setRole(role);
-        return toResponse(userRepository.save(user));
+        userRepository.save(user);
+        adminAuditLogService.record(
+                adminUserId,
+                AdminAuditAction.USER_ROLE_CHANGED,
+                AdminAuditTargetType.USER,
+                userId,
+                "role changed from " + previousRole + " to " + role
+        );
+        return toResponse(user);
     }
 
     private void ensureAnotherActiveAdminRemains() {

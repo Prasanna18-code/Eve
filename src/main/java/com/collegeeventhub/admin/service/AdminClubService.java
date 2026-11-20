@@ -11,7 +11,7 @@ public interface AdminClubService {
             Boolean active
     );
 
-    void activateClub(Long clubId);
+    void activateClub(Long clubId, Long adminUserId);
 
-    void deactivateClub(Long clubId);
+    void deactivateClub(Long clubId, Long adminUserId);
 }

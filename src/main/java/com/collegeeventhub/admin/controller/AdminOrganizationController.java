@@ -2,12 +2,14 @@ package com.collegeeventhub.admin.controller;
 
 import com.collegeeventhub.admin.dto.AdminOrganizationResponse;
 import com.collegeeventhub.admin.service.AdminOrganizationService;
+import com.collegeeventhub.admin.security.AdminActor;
 import com.collegeeventhub.common.response.ApiResponse;
 import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.util.Pagination;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -45,9 +47,13 @@ public class AdminOrganizationController {
     @PutMapping("/{organizationId}/activate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> activateOrganization(
-            @PathVariable Long organizationId) {
+            @PathVariable Long organizationId,
+            Authentication authentication) {
 
-        adminOrganizationService.activateOrganization(organizationId);
+        adminOrganizationService.activateOrganization(
+                organizationId,
+                AdminActor.getUserId(authentication)
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
@@ -61,9 +67,13 @@ public class AdminOrganizationController {
     @PutMapping("/{organizationId}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deactivateOrganization(
-            @PathVariable Long organizationId) {
+            @PathVariable Long organizationId,
+            Authentication authentication) {
 
-        adminOrganizationService.deactivateOrganization(organizationId);
+        adminOrganizationService.deactivateOrganization(
+                organizationId,
+                AdminActor.getUserId(authentication)
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse<>(

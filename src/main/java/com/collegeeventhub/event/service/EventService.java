@@ -1,5 +1,6 @@
 package com.collegeeventhub.event.service;
 
+import com.collegeeventhub.common.enums.EventStatus;
 import com.collegeeventhub.common.enums.EventType;
 import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.event.dto.EventRequest;
@@ -52,5 +53,5 @@ public interface EventService {
             String username
     );
 
-    void cancelEventByAdmin(Long eventId);
+    EventStatus cancelEventByAdmin(Long eventId);
 }

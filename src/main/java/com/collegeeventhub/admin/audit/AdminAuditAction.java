@@ -1,0 +1,12 @@
+package com.collegeeventhub.admin.audit;
+
+public enum AdminAuditAction {
+    USER_ACTIVATED,
+    USER_DEACTIVATED,
+    USER_ROLE_CHANGED,
+    ORGANIZATION_ACTIVATED,
+    ORGANIZATION_DEACTIVATED,
+    CLUB_ACTIVATED,
+    CLUB_DEACTIVATED,
+    EVENT_CANCELLED
+}

@@ -281,6 +281,15 @@
         "url": {"raw": "{{baseUrl}}/api/v1/admin/clubs/{{clubId}}/activate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "clubs", "{{clubId}}", "activate"]}
       },
       "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin reactivates club', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "25 - Admin reviews club audit logs",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/audit-logs?size=50&adminUserId={{adminId}}&targetType=CLUB", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "audit-logs"], "query": [{"key": "size", "value": "50"}, {"key": "adminUserId", "value": "{{adminId}}"}, {"key": "targetType", "value": "CLUB"}]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can read paginated audit logs', () => pm.response.to.have.status(200));", "const logs = pm.response.json().data.content;", "pm.test('Club deactivation is recorded', () => pm.expect(logs.some((log) => String(log.targetId) === String(pm.environment.get('clubId')) && log.action === 'CLUB_DEACTIVATED')).to.eql(true));"]}}]
     }
   ]
 }

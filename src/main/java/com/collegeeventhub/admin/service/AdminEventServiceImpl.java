@@ -1,6 +1,9 @@
 package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminEventResponse;
+import com.collegeeventhub.admin.audit.AdminAuditAction;
+import com.collegeeventhub.admin.audit.AdminAuditLogService;
+import com.collegeeventhub.admin.audit.AdminAuditTargetType;
 import com.collegeeventhub.common.enums.EventStatus;
 import com.collegeeventhub.common.enums.EventType;
 import com.collegeeventhub.common.response.PageResponse;
@@ -22,6 +25,7 @@ public class AdminEventServiceImpl implements AdminEventService {
 
     private final EventRepository eventRepository;
     private final EventService eventService;
+    private final AdminAuditLogService adminAuditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -63,8 +67,16 @@ public class AdminEventServiceImpl implements AdminEventService {
 
     @Override
     @Transactional
-    public void cancelEvent(Long eventId) {
-        eventService.cancelEventByAdmin(eventId);
+    public void cancelEvent(Long eventId, Long adminUserId) {
+        EventStatus previousStatus = eventService.cancelEventByAdmin(eventId);
+        adminAuditLogService.record(
+                adminUserId,
+                AdminAuditAction.EVENT_CANCELLED,
+                AdminAuditTargetType.EVENT,
+                eventId,
+                "status changed from " + previousStatus + " to "
+                        + EventStatus.CANCELLED
+        );
     }
 
     private AdminEventResponse toResponse(EventEntity event) {

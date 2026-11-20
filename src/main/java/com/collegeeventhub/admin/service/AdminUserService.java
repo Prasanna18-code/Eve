@@ -13,7 +13,7 @@ public interface AdminUserService {
             Boolean active
     );
 
-    void activateUser(Long userId);
+    void activateUser(Long userId, Long adminUserId);
 
     void deactivateUser(Long userId, Long adminUserId);
 

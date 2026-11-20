@@ -15,5 +15,5 @@ public interface AdminEventService {
             Long organizationId
     );
 
-    void cancelEvent(Long eventId);
+    void cancelEvent(Long eventId, Long adminUserId);
 }

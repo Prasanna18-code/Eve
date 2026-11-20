@@ -1,6 +1,7 @@
 package com.collegeeventhub.admin.controller;
 
 import com.collegeeventhub.admin.service.AdminClubService;
+import com.collegeeventhub.admin.security.AdminActor;
 import com.collegeeventhub.club.dto.ClubResponse;
 import com.collegeeventhub.common.response.ApiResponse;
 import com.collegeeventhub.common.response.PageResponse;
@@ -8,6 +9,7 @@ import com.collegeeventhub.common.util.Pagination;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -40,8 +42,12 @@ public class AdminClubController {
     @PutMapping("/{clubId}/activate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> activateClub(
-            @PathVariable Long clubId) {
-        adminClubService.activateClub(clubId);
+            @PathVariable Long clubId,
+            Authentication authentication) {
+        adminClubService.activateClub(
+                clubId,
+                AdminActor.getUserId(authentication)
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Club activated successfully", null)
@@ -51,8 +57,12 @@ public class AdminClubController {
     @PutMapping("/{clubId}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deactivateClub(
-            @PathVariable Long clubId) {
-        adminClubService.deactivateClub(clubId);
+            @PathVariable Long clubId,
+            Authentication authentication) {
+        adminClubService.deactivateClub(
+                clubId,
+                AdminActor.getUserId(authentication)
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Club deactivated successfully", null)

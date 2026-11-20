@@ -1,5 +1,8 @@
 package com.collegeeventhub.admin.service;
 
+import com.collegeeventhub.admin.audit.AdminAuditAction;
+import com.collegeeventhub.admin.audit.AdminAuditLogService;
+import com.collegeeventhub.admin.audit.AdminAuditTargetType;
 import com.collegeeventhub.admin.dto.AdminUserPageResponse;
 import com.collegeeventhub.admin.dto.AdminUserResponse;
 import com.collegeeventhub.common.enums.Role;
@@ -32,11 +35,17 @@ class AdminUserServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private AdminAuditLogService adminAuditLogService;
+
     private AdminUserServiceImpl adminUserService;
 
     @BeforeEach
     void setUp() {
-        adminUserService = new AdminUserServiceImpl(userRepository);
+        adminUserService = new AdminUserServiceImpl(
+                userRepository,
+                adminAuditLogService
+        );
     }
 
     @Test
@@ -79,6 +88,13 @@ class AdminUserServiceImplTest {
 
         assertFalse(student.getActive());
         verify(userRepository).save(student);
+        verify(adminAuditLogService).record(
+                7L,
+                AdminAuditAction.USER_DEACTIVATED,
+                AdminAuditTargetType.USER,
+                8L,
+                "active changed from true to false"
+        );
     }
 
     @Test
@@ -119,6 +135,13 @@ class AdminUserServiceImplTest {
         assertEquals(Role.FACULTY, student.getRole());
         assertEquals(Role.FACULTY, result.getRole());
         verify(userRepository).save(student);
+        verify(adminAuditLogService).record(
+                7L,
+                AdminAuditAction.USER_ROLE_CHANGED,
+                AdminAuditTargetType.USER,
+                8L,
+                "role changed from STUDENT to FACULTY"
+        );
     }
 
     @Test

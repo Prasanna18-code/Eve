@@ -284,8 +284,8 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
-    public void cancelEventByAdmin(Long eventId) {
-        cancelEvent(findEventForCancellation(eventId));
+    public EventStatus cancelEventByAdmin(Long eventId) {
+        return cancelEvent(findEventForCancellation(eventId));
     }
 
     private EventEntity findEventForCancellation(Long eventId) {
@@ -295,7 +295,8 @@ public class EventServiceImpl implements EventService {
                                 "Event not found with id: " + eventId));
     }
 
-    private void cancelEvent(EventEntity event) {
+    private EventStatus cancelEvent(EventEntity event) {
+        EventStatus previousStatus = event.getStatus();
         event.setStatus(EventStatus.CANCELLED);
         eventRepository.save(event);
 
@@ -309,6 +310,7 @@ public class EventServiceImpl implements EventService {
                     "The event \"" + event.getTitle() + "\" has been cancelled."
             );
         }
+        return previousStatus;
     }
 
     private void verifyLeader(

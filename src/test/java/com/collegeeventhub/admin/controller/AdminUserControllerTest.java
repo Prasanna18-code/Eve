@@ -91,7 +91,7 @@ class AdminUserControllerTest {
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
                         "/api/v1/admin/users/7/activate"
-                ).with(user("admin").roles("ADMIN")))
+                ).with(user(principal(7L, "admin"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("User activated successfully"));
@@ -118,7 +118,7 @@ class AdminUserControllerTest {
                 .andExpect(jsonPath("$.data.role").value("FACULTY"));
 
         verify(adminUserService).getAllUsers(0, 10, null, null);
-        verify(adminUserService).activateUser(7L);
+        verify(adminUserService).activateUser(7L, 7L);
         verify(adminUserService).deactivateUser(7L, 7L);
         verify(adminUserService).updateUserRole(8L, Role.FACULTY, 7L);
     }

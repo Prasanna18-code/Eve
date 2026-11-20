@@ -9,6 +9,7 @@ import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.security.CustomAccessDeniedHandler;
 import com.collegeeventhub.common.security.CustomAuthenticationEntryPoint;
 import com.collegeeventhub.config.SecurityConfig;
+import com.collegeeventhub.security.AuthenticatedUserPrincipal;
 import com.collegeeventhub.security.CustomUserDetailsService;
 import com.collegeeventhub.security.JwtService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -85,13 +86,13 @@ class AdminEventControllerTest {
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
                         "/api/v1/admin/events/7/cancel"
-                ).with(user("admin").roles("ADMIN")))
+                ).with(user(principal(7L))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Event cancelled successfully"));
 
         verify(adminEventService).getAllEvents(0, 10, null, null, null);
-        verify(adminEventService).cancelEvent(7L);
+        verify(adminEventService).cancelEvent(7L, 7L);
     }
 
     @Test
@@ -139,17 +140,17 @@ class AdminEventControllerTest {
     @Test
     void invalidEventIdReturnsNotFound() throws Exception {
         doThrow(new ResourceNotFoundException("Event not found with id: 404"))
-                .when(adminEventService).cancelEvent(404L);
+                .when(adminEventService).cancelEvent(404L, 7L);
 
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
                         "/api/v1/admin/events/404/cancel"
-                ).with(user("admin").roles("ADMIN")))
+                ).with(user(principal(7L))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("Event not found with id: 404"));
 
-        verify(adminEventService).cancelEvent(404L);
+        verify(adminEventService).cancelEvent(404L, 7L);
     }
 
     @Test
@@ -179,6 +180,16 @@ class AdminEventControllerTest {
             HttpMethod method,
             String path) {
         return request(method, path);
+    }
+
+    private AuthenticatedUserPrincipal principal(Long id) {
+        return new AuthenticatedUserPrincipal(
+                id,
+                "admin",
+                "password",
+                "ADMIN",
+                true
+        );
     }
 
     private record Endpoint(HttpMethod method, String path) {

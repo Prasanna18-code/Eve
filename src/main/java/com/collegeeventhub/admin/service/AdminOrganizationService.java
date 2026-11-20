@@ -11,7 +11,7 @@ public interface AdminOrganizationService {
             Boolean active
     );
 
-    void activateOrganization(Long organizationId);
+    void activateOrganization(Long organizationId, Long adminUserId);
 
-    void deactivateOrganization(Long organizationId);
+    void deactivateOrganization(Long organizationId, Long adminUserId);
 }

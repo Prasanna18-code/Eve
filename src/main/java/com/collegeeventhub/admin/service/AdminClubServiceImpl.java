@@ -4,6 +4,9 @@ import com.collegeeventhub.club.dto.ClubResponse;
 import com.collegeeventhub.club.entity.ClubEntity;
 import com.collegeeventhub.club.mapper.ClubMapper;
 import com.collegeeventhub.club.repository.ClubRepository;
+import com.collegeeventhub.admin.audit.AdminAuditAction;
+import com.collegeeventhub.admin.audit.AdminAuditLogService;
+import com.collegeeventhub.admin.audit.AdminAuditTargetType;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.util.Pagination;
@@ -19,6 +22,7 @@ public class AdminClubServiceImpl implements AdminClubService {
 
     private final ClubRepository clubRepository;
     private final ClubMapper clubMapper;
+    private final AdminAuditLogService adminAuditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -40,18 +44,34 @@ public class AdminClubServiceImpl implements AdminClubService {
 
     @Override
     @Transactional
-    public void activateClub(Long clubId) {
+    public void activateClub(Long clubId, Long adminUserId) {
         ClubEntity club = findClub(clubId);
+        boolean wasActive = Boolean.TRUE.equals(club.getActive());
         club.setActive(true);
         clubRepository.save(club);
+        adminAuditLogService.record(
+                adminUserId,
+                AdminAuditAction.CLUB_ACTIVATED,
+                AdminAuditTargetType.CLUB,
+                clubId,
+                "active changed from " + wasActive + " to true"
+        );
     }
 
     @Override
     @Transactional
-    public void deactivateClub(Long clubId) {
+    public void deactivateClub(Long clubId, Long adminUserId) {
         ClubEntity club = findClub(clubId);
+        boolean wasActive = Boolean.TRUE.equals(club.getActive());
         club.setActive(false);
         clubRepository.save(club);
+        adminAuditLogService.record(
+                adminUserId,
+                AdminAuditAction.CLUB_DEACTIVATED,
+                AdminAuditTargetType.CLUB,
+                clubId,
+                "active changed from " + wasActive + " to false"
+        );
     }
 
     private ClubEntity findClub(Long clubId) {

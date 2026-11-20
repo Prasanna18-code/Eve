@@ -73,11 +73,11 @@ class AdminClubModerationIntegrationTest {
         assertEquals(1, activePage.getContent().size());
         assertEquals(true, activePage.getContent().get(0).getActive());
 
-        adminClubService.deactivateClub(club.getId());
+        adminClubService.deactivateClub(club.getId(), 999L);
         assertEquals(false, clubRepository.findById(club.getId())
                 .orElseThrow().getActive());
 
-        adminClubService.activateClub(inactiveClub.getId());
+        adminClubService.activateClub(inactiveClub.getId(), 999L);
         assertEquals(true, clubRepository.findById(inactiveClub.getId())
                 .orElseThrow().getActive());
     }
@@ -86,11 +86,11 @@ class AdminClubModerationIntegrationTest {
     void missingClubCannotBeActivatedOrDeactivated() {
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> adminClubService.activateClub(-1L)
+                () -> adminClubService.activateClub(-1L, 999L)
         );
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> adminClubService.deactivateClub(-1L)
+                () -> adminClubService.deactivateClub(-1L, 999L)
         );
     }
 

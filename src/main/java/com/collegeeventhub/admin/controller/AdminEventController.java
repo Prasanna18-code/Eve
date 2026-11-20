@@ -2,6 +2,7 @@ package com.collegeeventhub.admin.controller;
 
 import com.collegeeventhub.admin.dto.AdminEventResponse;
 import com.collegeeventhub.admin.service.AdminEventService;
+import com.collegeeventhub.admin.security.AdminActor;
 import com.collegeeventhub.common.enums.EventStatus;
 import com.collegeeventhub.common.enums.EventType;
 import com.collegeeventhub.common.response.ApiResponse;
@@ -10,6 +11,7 @@ import com.collegeeventhub.common.util.Pagination;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -49,9 +51,13 @@ public class AdminEventController {
     @PutMapping("/{eventId}/cancel")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> cancelEvent(
-            @PathVariable Long eventId) {
+            @PathVariable Long eventId,
+            Authentication authentication) {
 
-        adminEventService.cancelEvent(eventId);
+        adminEventService.cancelEvent(
+                eventId,
+                AdminActor.getUserId(authentication)
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Event cancelled successfully", null)

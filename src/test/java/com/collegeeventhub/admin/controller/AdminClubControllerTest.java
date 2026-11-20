@@ -7,6 +7,7 @@ import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.security.CustomAccessDeniedHandler;
 import com.collegeeventhub.common.security.CustomAuthenticationEntryPoint;
 import com.collegeeventhub.config.SecurityConfig;
+import com.collegeeventhub.security.AuthenticatedUserPrincipal;
 import com.collegeeventhub.security.CustomUserDetailsService;
 import com.collegeeventhub.security.JwtService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -82,20 +83,20 @@ class AdminClubControllerTest {
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
                         "/api/v1/admin/clubs/7/activate"
-                ).with(user("admin").roles("ADMIN")))
+                ).with(user(principal(7L))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Club activated successfully"));
 
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
                         "/api/v1/admin/clubs/7/deactivate"
-                ).with(user("admin").roles("ADMIN")))
+                ).with(user(principal(7L))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Club deactivated successfully"));
 
         verify(adminClubService).getAllClubs(0, 10, null);
-        verify(adminClubService).activateClub(7L);
-        verify(adminClubService).deactivateClub(7L);
+        verify(adminClubService).activateClub(7L, 7L);
+        verify(adminClubService).deactivateClub(7L, 7L);
     }
 
     @Test
@@ -159,23 +160,33 @@ class AdminClubControllerTest {
     @Test
     void missingClubIsMappedToNotFound() throws Exception {
         doThrow(new ResourceNotFoundException("Club not found"))
-                .when(adminClubService).deactivateClub(404L);
+                .when(adminClubService).deactivateClub(404L, 7L);
 
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
                         "/api/v1/admin/clubs/404/deactivate"
-                ).with(user("admin").roles("ADMIN")))
+                ).with(user(principal(7L))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("Club not found"));
 
-        verify(adminClubService).deactivateClub(404L);
+        verify(adminClubService).deactivateClub(404L, 7L);
     }
 
     private MockHttpServletRequestBuilder endpoint(
             HttpMethod method,
             String path) {
         return request(method, path);
+    }
+
+    private AuthenticatedUserPrincipal principal(Long id) {
+        return new AuthenticatedUserPrincipal(
+                id,
+                "admin",
+                "password",
+                "ADMIN",
+                true
+        );
     }
 
     private record Endpoint(HttpMethod method, String path) {

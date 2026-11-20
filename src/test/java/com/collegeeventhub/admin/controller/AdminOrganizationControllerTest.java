@@ -5,6 +5,7 @@ import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.security.CustomAccessDeniedHandler;
 import com.collegeeventhub.common.security.CustomAuthenticationEntryPoint;
 import com.collegeeventhub.config.SecurityConfig;
+import com.collegeeventhub.security.AuthenticatedUserPrincipal;
 import com.collegeeventhub.security.CustomUserDetailsService;
 import com.collegeeventhub.security.JwtService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -81,7 +82,7 @@ class AdminOrganizationControllerTest {
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
                         "/api/v1/admin/organizations/7/activate"
-                ).with(user("admin").roles("ADMIN")))
+                ).with(user(principal(7L))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value(
@@ -90,15 +91,15 @@ class AdminOrganizationControllerTest {
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
                         "/api/v1/admin/organizations/7/deactivate"
-                ).with(user("admin").roles("ADMIN")))
+                ).with(user(principal(7L))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value(
                         "Organization deactivated successfully"));
 
         verify(adminOrganizationService).getAllOrganizations(0, 10, null);
-        verify(adminOrganizationService).activateOrganization(7L);
-        verify(adminOrganizationService).deactivateOrganization(7L);
+        verify(adminOrganizationService).activateOrganization(7L, 7L);
+        verify(adminOrganizationService).deactivateOrganization(7L, 7L);
     }
 
     @Test
@@ -164,6 +165,16 @@ class AdminOrganizationControllerTest {
             HttpMethod method,
             String path) {
         return request(method, path);
+    }
+
+    private AuthenticatedUserPrincipal principal(Long id) {
+        return new AuthenticatedUserPrincipal(
+                id,
+                "admin",
+                "password",
+                "ADMIN",
+                true
+        );
     }
 
     private record Endpoint(HttpMethod method, String path) {
