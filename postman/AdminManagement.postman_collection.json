@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "College Event Hub - Admin Management E2E",
-    "description": "End-to-end admin tests for user, organization, and event operations, including current account-active checks for previously issued student JWTs.",
+    "description": "End-to-end admin tests for user, organization, club, and event operations, including current account-active checks for previously issued student JWTs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [{"key": "baseUrl", "value": "http://localhost:8081"}],
@@ -52,6 +52,17 @@
         "url": {"raw": "{{baseUrl}}/api/v1/organizations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations"]}
       },
       "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organization fixture created', () => pm.response.to.have.status(201));", "pm.environment.set('organizationId', pm.response.json().data.id);"]}}]
+    },
+    {
+      "name": "04a - Create club fixture",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{leaderToken}}", "type": "string"}]},
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"name\": \"AdminFlow Club {{leaderUsername}}\",\n  \"description\": \"Temporary club for admin tests\",\n  \"email\": \"{{leaderEmail}}\",\n  \"phoneNumber\": \"1234567890\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/organizations/{{organizationId}}/clubs", "host": ["{{baseUrl}}"], "path": ["api", "v1", "organizations", "{{organizationId}}", "clubs"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Club fixture created', () => pm.response.to.have.status(200));", "pm.environment.set('clubId', pm.response.json().data.id);"]}}]
     },
     {
       "name": "05 - Create event fixture",
@@ -234,6 +245,42 @@
         "url": {"raw": "{{baseUrl}}/api/v1/admin/events?size=50&organizationId={{organizationId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events"], "query": [{"key": "size", "value": "50"}, {"key": "organizationId", "value": "{{organizationId}}"}]}
       },
       "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Events reload', () => pm.response.to.have.status(200));", "const event = pm.response.json().data.content.find((item) => String(item.id) === String(pm.environment.get('eventId')));", "pm.test('Event status is CANCELLED', () => pm.expect(event.status).to.eql('CANCELLED')); "]}}]
+    },
+    {
+      "name": "21 - Admin lists clubs",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/clubs?size=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "clubs"], "query": [{"key": "size", "value": "50"}]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list clubs', () => pm.response.to.have.status(200));", "pm.test('Club list is paginated', () => pm.expect(pm.response.json().data.content).to.be.an('array'));"]}}]
+    },
+    {
+      "name": "22 - Admin deactivates club",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/clubs/{{clubId}}/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "clubs", "{{clubId}}", "deactivate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin deactivates club', () => pm.response.to.have.status(200));"]}}]
+    },
+    {
+      "name": "23 - Admin verifies club is inactive",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "GET",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/clubs?size=50&active=false", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "clubs"], "query": [{"key": "size", "value": "50"}, {"key": "active", "value": "false"}]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Inactive clubs load', () => pm.response.to.have.status(200));", "const club = pm.response.json().data.content.find((item) => String(item.id) === String(pm.environment.get('clubId')));", "pm.test('Club active is false', () => pm.expect(club && club.active).to.eql(false));"]}}]
+    },
+    {
+      "name": "24 - Admin reactivates club",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "PUT",
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/clubs/{{clubId}}/activate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "clubs", "{{clubId}}", "activate"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin reactivates club', () => pm.response.to.have.status(200));"]}}]
     }
   ]
 }
