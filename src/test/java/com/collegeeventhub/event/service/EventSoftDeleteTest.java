@@ -1,6 +1,7 @@
 package com.collegeeventhub.event.service;
 
 import com.collegeeventhub.common.enums.EventStatus;
+import com.collegeeventhub.common.enums.EventType;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.common.security.StudentProfileVerificationGuard;
 import com.collegeeventhub.event.entity.EventEntity;
@@ -17,6 +18,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDate;
@@ -25,6 +28,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -101,35 +105,112 @@ class EventSoftDeleteTest {
 
     @Test
     void normalEventListExcludesCancelledAndDeletedEvents() {
-        when(eventRepository
-                .findByEventDateGreaterThanEqualAndStatusNotInOrderByEventDateAsc(
-                        org.mockito.ArgumentMatchers.any(LocalDate.class),
-                        eq(List.of(EventStatus.CANCELLED, EventStatus.DELETED))
-                ))
-                .thenReturn(List.of());
+        when(studentProfileVerificationGuard.checkAuthenticatedUser())
+                .thenReturn(UserEntity.builder()
+                        .role(com.collegeeventhub.common.enums.Role.ADMIN)
+                        .build());
+        when(eventRepository.findAllByListingFilters(
+                eq(true),
+                any(LocalDate.class),
+                eq(false),
+                eq(EventStatus.UPCOMING),
+                eq(true),
+                eq(true),
+                eq(EventStatus.CANCELLED),
+                eq(EventStatus.DELETED),
+                eq(false),
+                eq(EventType.ONLINE),
+                eq(false),
+                eq(-1L),
+                eq(false),
+                eq(false),
+                eq(""),
+                eq(false),
+                eq(0),
+                eq(false),
+                eq(""),
+                any(Pageable.class)
+        )).thenReturn(Page.empty());
 
-        eventService.getAllEvents();
+        eventService.getAllEvents(0, 10, null, null);
 
-        verify(eventRepository)
-                .findByEventDateGreaterThanEqualAndStatusNotInOrderByEventDateAsc(
-                        org.mockito.ArgumentMatchers.any(LocalDate.class),
-                        eq(List.of(EventStatus.CANCELLED, EventStatus.DELETED))
-                );
+        verify(eventRepository).findAllByListingFilters(
+                eq(true),
+                any(LocalDate.class),
+                eq(false),
+                eq(EventStatus.UPCOMING),
+                eq(true),
+                eq(true),
+                eq(EventStatus.CANCELLED),
+                eq(EventStatus.DELETED),
+                eq(false),
+                eq(EventType.ONLINE),
+                eq(false),
+                eq(-1L),
+                eq(false),
+                eq(false),
+                eq(""),
+                eq(false),
+                eq(0),
+                eq(false),
+                eq(""),
+                any(Pageable.class)
+        );
     }
 
     @Test
     void organizationEventListExcludesDeletedEvents() {
         when(organizationRepository.existsById(2L)).thenReturn(true);
-        when(eventRepository.findByOrganizationIdAndStatusNot(
-                2L,
-                EventStatus.DELETED
-        )).thenReturn(List.of());
+        when(studentProfileVerificationGuard.checkAuthenticatedUser())
+                .thenReturn(UserEntity.builder()
+                        .role(com.collegeeventhub.common.enums.Role.ADMIN)
+                        .build());
+        when(eventRepository.findAllByListingFilters(
+                eq(false),
+                eq(LocalDate.of(1970, 1, 1)),
+                eq(false),
+                eq(EventStatus.UPCOMING),
+                eq(false),
+                eq(true),
+                eq(EventStatus.CANCELLED),
+                eq(EventStatus.DELETED),
+                eq(false),
+                eq(EventType.ONLINE),
+                eq(true),
+                eq(2L),
+                eq(false),
+                eq(false),
+                eq(""),
+                eq(false),
+                eq(0),
+                eq(false),
+                eq(""),
+                any(Pageable.class)
+        )).thenReturn(Page.empty());
 
-        eventService.getEventsByOrganization(2L);
+        eventService.getEventsByOrganization(2L, 0, 10, null);
 
-        verify(eventRepository).findByOrganizationIdAndStatusNot(
-                2L,
-                EventStatus.DELETED
+        verify(eventRepository).findAllByListingFilters(
+                eq(false),
+                eq(LocalDate.of(1970, 1, 1)),
+                eq(false),
+                eq(EventStatus.UPCOMING),
+                eq(false),
+                eq(true),
+                eq(EventStatus.CANCELLED),
+                eq(EventStatus.DELETED),
+                eq(false),
+                eq(EventType.ONLINE),
+                eq(true),
+                eq(2L),
+                eq(false),
+                eq(false),
+                eq(""),
+                eq(false),
+                eq(0),
+                eq(false),
+                eq(""),
+                any(Pageable.class)
         );
     }
 

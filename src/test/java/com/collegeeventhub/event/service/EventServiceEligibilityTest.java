@@ -1,6 +1,7 @@
 package com.collegeeventhub.event.service;
 
 import com.collegeeventhub.common.enums.EventStatus;
+import com.collegeeventhub.common.enums.EventType;
 import com.collegeeventhub.common.security.StudentProfileVerificationGuard;
 import com.collegeeventhub.event.dto.EventResponse;
 import com.collegeeventhub.event.entity.EventEntity;
@@ -18,6 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDate;
@@ -28,6 +33,8 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -114,59 +121,120 @@ class EventServiceEligibilityTest {
                 .thenReturn(EventResponse.builder().id(ELIGIBLE_EVENT_ID).build());
         org.mockito.Mockito.lenient().when(eventMapper.toResponse(ineligibleEvent))
                 .thenReturn(EventResponse.builder().id(INELIGIBLE_EVENT_ID).build());
-        org.mockito.Mockito.lenient().when(eventEligibilityService.isEligible(student, eligibleEvent))
-                .thenReturn(true);
-        org.mockito.Mockito.lenient().when(eventEligibilityService.isEligible(student, ineligibleEvent))
-                .thenReturn(false);
         org.mockito.Mockito.lenient().doThrow(new AccessDeniedException("You are not eligible for this event"))
                 .when(eventEligibilityService)
                 .checkEligible(student, ineligibleEvent);
     }
 
     @Test
-    void filtersMainEventListingForStudent() {
-        when(eventRepository
-                .findByEventDateGreaterThanEqualAndStatusNotInOrderByEventDateAsc(
-                        org.mockito.ArgumentMatchers.any(LocalDate.class),
-                        org.mockito.ArgumentMatchers.any()
-                ))
-                .thenReturn(List.of(eligibleEvent, ineligibleEvent));
+    void mainEventListingRequestsAudienceFilteredPageForStudent() {
+        Pageable pageable = PageRequest.of(
+                0,
+                10,
+                Sort.by(
+                        Sort.Order.asc("eventDate"),
+                        Sort.Order.asc("startTime"),
+                        Sort.Order.asc("id")
+                )
+        );
+        when(eventRepository.findAllByListingFilters(
+                eq(true),
+                any(LocalDate.class),
+                eq(false),
+                eq(EventStatus.UPCOMING),
+                eq(true),
+                eq(true),
+                eq(EventStatus.CANCELLED),
+                eq(EventStatus.DELETED),
+                eq(false),
+                eq(EventType.ONLINE),
+                eq(false),
+                eq(-1L),
+                eq(true),
+                eq(true),
+                eq("CSE"),
+                eq(true),
+                eq(3),
+                eq(true),
+                eq("A"),
+                eq(pageable)
+        )).thenReturn(new PageImpl<>(List.of(eligibleEvent), pageable, 1));
 
-        List<EventResponse> result = eventService.getAllEvents();
+        var result = eventService.getAllEvents(0, 10, null, null);
 
-        assertEquals(List.of(ELIGIBLE_EVENT_ID), result.stream()
+        assertEquals(List.of(ELIGIBLE_EVENT_ID), result.getContent().stream()
                 .map(EventResponse::getId)
                 .toList());
     }
 
     @Test
-    void filtersCancelledEventListingForStudent() {
-        when(eventRepository
-                .findByEventDateGreaterThanEqualAndStatusOrderByEventDateAsc(
-                        org.mockito.ArgumentMatchers.any(LocalDate.class),
-                        org.mockito.ArgumentMatchers.eq(EventStatus.CANCELLED)
-                ))
-                .thenReturn(List.of(eligibleEvent, ineligibleEvent));
+    void cancelledEventListingRequestsCancelledAudienceFilteredPage() {
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("eventDate", "startTime", "id"));
+        when(eventRepository.findAllByListingFilters(
+                eq(true),
+                any(LocalDate.class),
+                eq(true),
+                eq(EventStatus.CANCELLED),
+                eq(false),
+                eq(true),
+                eq(EventStatus.CANCELLED),
+                eq(EventStatus.DELETED),
+                eq(false),
+                eq(EventType.ONLINE),
+                eq(false),
+                eq(-1L),
+                eq(true),
+                eq(true),
+                eq("CSE"),
+                eq(true),
+                eq(3),
+                eq(true),
+                eq("A"),
+                eq(pageable)
+        )).thenReturn(new PageImpl<>(List.of(eligibleEvent), pageable, 1));
 
-        List<EventResponse> result = eventService.getCancelledEvents();
+        var result = eventService.getCancelledEvents(0, 10, null, null);
 
-        assertEquals(List.of(ELIGIBLE_EVENT_ID), result.stream()
+        assertEquals(List.of(ELIGIBLE_EVENT_ID), result.getContent().stream()
                 .map(EventResponse::getId)
                 .toList());
     }
 
     @Test
-    void filtersOrganizationEventListingAndRequiresVerifiedStudent() {
+    void organizationEventListingRequestsAudienceFilteredPageAndRequiresVerifiedStudent() {
         when(organizationRepository.existsById(ORGANIZATION_ID)).thenReturn(true);
-        when(eventRepository.findByOrganizationIdAndStatusNot(
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("eventDate", "startTime", "id"));
+        when(eventRepository.findAllByListingFilters(
+                eq(false),
+                eq(LocalDate.of(1970, 1, 1)),
+                eq(false),
+                eq(EventStatus.UPCOMING),
+                eq(false),
+                eq(true),
+                eq(EventStatus.CANCELLED),
+                eq(EventStatus.DELETED),
+                eq(false),
+                eq(EventType.ONLINE),
+                eq(true),
+                eq(ORGANIZATION_ID.longValue()),
+                eq(true),
+                eq(true),
+                eq("CSE"),
+                eq(true),
+                eq(3),
+                eq(true),
+                eq("A"),
+                eq(pageable)
+        )).thenReturn(new PageImpl<>(List.of(eligibleEvent), pageable, 1));
+
+        var result = eventService.getEventsByOrganization(
                 ORGANIZATION_ID,
-                EventStatus.DELETED
-        )).thenReturn(List.of(eligibleEvent, ineligibleEvent));
+                0,
+                10,
+                null
+        );
 
-        List<EventResponse> result =
-                eventService.getEventsByOrganization(ORGANIZATION_ID);
-
-        assertEquals(List.of(ELIGIBLE_EVENT_ID), result.stream()
+        assertEquals(List.of(ELIGIBLE_EVENT_ID), result.getContent().stream()
                 .map(EventResponse::getId)
                 .toList());
         verify(studentProfileVerificationGuard).checkAuthenticatedUser();
@@ -193,7 +261,12 @@ class EventServiceEligibilityTest {
 
         assertThrows(
                 AccessDeniedException.class,
-                () -> eventService.getEventsByOrganization(ORGANIZATION_ID)
+                () -> eventService.getEventsByOrganization(
+                        ORGANIZATION_ID,
+                        0,
+                        10,
+                        null
+                )
         );
         verify(organizationRepository, never()).existsById(ORGANIZATION_ID);
     }

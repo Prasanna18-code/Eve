@@ -1,9 +1,9 @@
 package com.collegeeventhub.event.service;
 
+import com.collegeeventhub.common.enums.EventType;
+import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.event.dto.EventRequest;
 import com.collegeeventhub.event.dto.EventResponse;
-
-import java.util.List;
 
 public interface EventService {
 
@@ -13,14 +13,27 @@ public interface EventService {
             EventRequest request
     );
 
-    List<EventResponse> getAllEvents();
+    PageResponse<EventResponse> getAllEvents(
+            int page,
+            int size,
+            EventType type,
+            Long organizationId
+    );
 
-    List<EventResponse> getCancelledEvents();
+    PageResponse<EventResponse> getCancelledEvents(
+            int page,
+            int size,
+            EventType type,
+            Long organizationId
+    );
 
     EventResponse getEventById(Long id);
 
-    List<EventResponse> getEventsByOrganization(
-            Long organizationId
+    PageResponse<EventResponse> getEventsByOrganization(
+            Long organizationId,
+            int page,
+            int size,
+            EventType type
     );
 
     EventResponse updateEvent(

@@ -1,7 +1,9 @@
 package com.collegeeventhub.organization.controller;
 
 import com.collegeeventhub.common.constants.ApiConstants;
+import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.response.ApiResponse;
+import com.collegeeventhub.common.util.Pagination;
 import com.collegeeventhub.organization.dto.OrganizationRequest;
 import com.collegeeventhub.organization.dto.OrganizationResponse;
 import com.collegeeventhub.organization.service.OrganizationService;
@@ -12,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping(ApiConstants.API_VERSION + "/organizations")
@@ -36,10 +37,14 @@ public class OrganizationController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<OrganizationResponse>>> getAllOrganizations() {
-
-        List<OrganizationResponse> organizations =
-                organizationService.getAllOrganizations();
+    public ResponseEntity<ApiResponse<PageResponse<OrganizationResponse>>>
+    getAllOrganizations(
+            @RequestParam(defaultValue = "" + Pagination.DEFAULT_PAGE) int page,
+            @RequestParam(defaultValue = "" + Pagination.DEFAULT_SIZE) int size,
+            @RequestParam(required = false) Boolean active) {
+        Pagination.validate(page, size);
+        PageResponse<OrganizationResponse> organizations =
+                organizationService.getAllOrganizations(page, size, active);
 
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Organizations retrieved successfully", organizations)

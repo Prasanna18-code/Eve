@@ -1,12 +1,19 @@
 package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminEventResponse;
-
-import java.util.List;
+import com.collegeeventhub.common.enums.EventStatus;
+import com.collegeeventhub.common.enums.EventType;
+import com.collegeeventhub.common.response.PageResponse;
 
 public interface AdminEventService {
 
-    List<AdminEventResponse> getAllEvents();
+    PageResponse<AdminEventResponse> getAllEvents(
+            int page,
+            int size,
+            EventStatus status,
+            EventType type,
+            Long organizationId
+    );
 
     void cancelEvent(Long eventId);
 }

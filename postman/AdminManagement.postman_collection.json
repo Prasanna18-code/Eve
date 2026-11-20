@@ -166,9 +166,9 @@
       "request": {
         "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
         "method": "GET",
-        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations"]}
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations?size=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations"], "query": [{"key": "size", "value": "50"}]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list organizations', () => pm.response.to.have.status(200));", "const organization = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('organizationId')));", "pm.test('Organization fixture is listed', () => pm.expect(organization).to.exist);"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list organizations', () => pm.response.to.have.status(200));", "const organization = pm.response.json().data.content.find((item) => String(item.id) === String(pm.environment.get('organizationId')));", "pm.test('Organization fixture is listed', () => pm.expect(organization).to.exist);"]}}]
     },
     {
       "name": "15 - Admin deactivates organization",
@@ -184,9 +184,9 @@
       "request": {
         "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
         "method": "GET",
-        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations"]}
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/organizations?size=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "organizations"], "query": [{"key": "size", "value": "50"}]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organizations reload', () => pm.response.to.have.status(200));", "const item = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('organizationId')));", "pm.test('Organization active is false', () => pm.expect(item.active).to.eql(false));"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Organizations reload', () => pm.response.to.have.status(200));", "const item = pm.response.json().data.content.find((item) => String(item.id) === String(pm.environment.get('organizationId')));", "pm.test('Organization active is false', () => pm.expect(item.active).to.eql(false));"]}}]
     },
     {
       "name": "17 - Admin activates organization",
@@ -202,9 +202,9 @@
       "request": {
         "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
         "method": "GET",
-        "url": {"raw": "{{baseUrl}}/api/v1/admin/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events"]}
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/events?size=50&organizationId={{organizationId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events"], "query": [{"key": "size", "value": "50"}, {"key": "organizationId", "value": "{{organizationId}}"}]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list events', () => pm.response.to.have.status(200));", "const event = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('eventId')));", "pm.test('Event fixture is listed globally with owning organization', () => { pm.expect(event).to.exist; if (event) pm.expect(String(event.organizationId)).to.eql(String(pm.environment.get('organizationId'))); });"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list events', () => pm.response.to.have.status(200));", "const event = pm.response.json().data.content.find((item) => String(item.id) === String(pm.environment.get('eventId')));", "pm.test('Event fixture is listed globally with owning organization', () => { pm.expect(event).to.exist; if (event) pm.expect(String(event.organizationId)).to.eql(String(pm.environment.get('organizationId'))); });"]}}]
     },
     {
       "name": "19 - Admin cancels event",
@@ -220,9 +220,9 @@
       "request": {
         "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
         "method": "GET",
-        "url": {"raw": "{{baseUrl}}/api/v1/admin/events", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events"]}
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/events?size=50&organizationId={{organizationId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "events"], "query": [{"key": "size", "value": "50"}, {"key": "organizationId", "value": "{{organizationId}}"}]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Events reload', () => pm.response.to.have.status(200));", "const event = pm.response.json().data.find((item) => String(item.id) === String(pm.environment.get('eventId')));", "pm.test('Event status is CANCELLED', () => pm.expect(event.status).to.eql('CANCELLED')); "]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Events reload', () => pm.response.to.have.status(200));", "const event = pm.response.json().data.content.find((item) => String(item.id) === String(pm.environment.get('eventId')));", "pm.test('Event status is CANCELLED', () => pm.expect(event.status).to.eql('CANCELLED')); "]}}]
     }
   ]
 }

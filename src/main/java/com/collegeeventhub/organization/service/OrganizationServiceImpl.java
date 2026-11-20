@@ -1,6 +1,8 @@
 package com.collegeeventhub.organization.service;
 
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
+import com.collegeeventhub.common.response.PageResponse;
+import com.collegeeventhub.common.util.Pagination;
 import com.collegeeventhub.organization.dto.OrganizationRequest;
 import com.collegeeventhub.organization.dto.OrganizationResponse;
 import com.collegeeventhub.organization.entity.OrganizationEntity;
@@ -10,9 +12,10 @@ import com.collegeeventhub.user.entity.UserEntity;
 import com.collegeeventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -49,12 +52,22 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
-    public List<OrganizationResponse> getAllOrganizations() {
-
-        return organizationRepository.findAll()
-                .stream()
-                .map(organizationMapper::toResponse)
-                .toList();
+    @Transactional(readOnly = true)
+    public PageResponse<OrganizationResponse> getAllOrganizations(
+            int page,
+            int size,
+            Boolean active) {
+        Page<OrganizationEntity> organizations =
+                organizationRepository.findAllByFilters(
+                        active != null,
+                        Boolean.TRUE.equals(active),
+                        Pagination.pageRequest(
+                                page,
+                                size,
+                                Sort.by(Sort.Order.asc("id"))
+                        )
+                );
+        return PageResponse.from(organizations, organizationMapper::toResponse);
     }
 
     @Override

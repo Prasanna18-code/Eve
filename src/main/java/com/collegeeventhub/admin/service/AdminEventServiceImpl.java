@@ -1,14 +1,20 @@
 package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminEventResponse;
+import com.collegeeventhub.common.enums.EventStatus;
+import com.collegeeventhub.common.enums.EventType;
+import com.collegeeventhub.common.response.PageResponse;
+import com.collegeeventhub.common.util.Pagination;
 import com.collegeeventhub.event.entity.EventEntity;
 import com.collegeeventhub.event.repository.EventRepository;
 import com.collegeeventhub.event.service.EventService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -19,12 +25,40 @@ public class AdminEventServiceImpl implements AdminEventService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AdminEventResponse> getAllEvents() {
-
-        return eventRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    public PageResponse<AdminEventResponse> getAllEvents(
+            int page,
+            int size,
+            EventStatus status,
+            EventType type,
+            Long organizationId) {
+        Page<EventEntity> events =
+                eventRepository.findAllByListingFilters(
+                        false,
+                        LocalDate.of(1970, 1, 1),
+                        status != null,
+                        status == null ? EventStatus.UPCOMING : status,
+                        false,
+                        false,
+                        EventStatus.CANCELLED,
+                        EventStatus.DELETED,
+                        type != null,
+                        type == null ? EventType.ONLINE : type,
+                        organizationId != null,
+                        organizationId == null ? -1L : organizationId,
+                        false,
+                        false,
+                        "",
+                        false,
+                        0,
+                        false,
+                        "",
+                        Pagination.pageRequest(
+                                page,
+                                size,
+                                Sort.by(Sort.Order.asc("id"))
+                        )
+                );
+        return PageResponse.from(events, this::toResponse);
     }
 
     @Override

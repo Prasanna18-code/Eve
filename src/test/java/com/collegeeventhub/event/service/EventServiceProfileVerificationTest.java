@@ -19,12 +19,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,21 +69,31 @@ class EventServiceProfileVerificationTest {
     void eventReadOperationsCheckStudentProfileVerification() {
         when(studentProfileVerificationGuard.checkAuthenticatedUser())
                 .thenReturn(UserEntity.builder().role(Role.CLUB_ADMIN).build());
-        when(eventRepository
-                .findByEventDateGreaterThanEqualAndStatusNotInOrderByEventDateAsc(
-                        org.mockito.ArgumentMatchers.any(LocalDate.class),
-                        org.mockito.ArgumentMatchers.any()
-                ))
-                .thenReturn(List.of());
-        when(eventRepository
-                .findByEventDateGreaterThanEqualAndStatusOrderByEventDateAsc(
-                        org.mockito.ArgumentMatchers.any(LocalDate.class),
-                        org.mockito.ArgumentMatchers.any()
-                ))
-                .thenReturn(List.of());
+        when(eventRepository.findAllByListingFilters(
+                anyBoolean(),
+                any(java.time.LocalDate.class),
+                anyBoolean(),
+                any(EventStatus.class),
+                anyBoolean(),
+                anyBoolean(),
+                any(EventStatus.class),
+                any(EventStatus.class),
+                anyBoolean(),
+                any(com.collegeeventhub.common.enums.EventType.class),
+                anyBoolean(),
+                anyLong(),
+                anyBoolean(),
+                anyBoolean(),
+                anyString(),
+                anyBoolean(),
+                anyInt(),
+                anyBoolean(),
+                anyString(),
+                any(Pageable.class)
+        )).thenReturn(Page.empty());
 
-        eventService.getAllEvents();
-        eventService.getCancelledEvents();
+        eventService.getAllEvents(0, 10, null, null);
+        eventService.getCancelledEvents(0, 10, null, null);
         verify(studentProfileVerificationGuard, org.mockito.Mockito.times(2))
                 .checkAuthenticatedUser();
 

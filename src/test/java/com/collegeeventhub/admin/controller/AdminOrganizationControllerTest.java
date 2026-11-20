@@ -1,6 +1,7 @@
 package com.collegeeventhub.admin.controller;
 
 import com.collegeeventhub.admin.service.AdminOrganizationService;
+import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.security.CustomAccessDeniedHandler;
 import com.collegeeventhub.common.security.CustomAuthenticationEntryPoint;
 import com.collegeeventhub.config.SecurityConfig;
@@ -55,7 +56,16 @@ class AdminOrganizationControllerTest {
 
     @Test
     void adminCanUseEveryEndpointAndResponsesRemainUnchanged() throws Exception {
-        when(adminOrganizationService.getAllOrganizations()).thenReturn(List.of());
+        when(adminOrganizationService.getAllOrganizations(0, 10, null))
+                .thenReturn(PageResponse.<com.collegeeventhub.admin.dto.AdminOrganizationResponse>
+                        builder()
+                        .content(List.of())
+                        .page(0)
+                        .size(10)
+                        .totalElements(0)
+                        .totalPages(0)
+                        .last(true)
+                        .build());
 
         mockMvc.perform(endpoint(HttpMethod.GET, "/api/v1/admin/organizations")
                         .with(user("admin").roles("ADMIN")))
@@ -63,8 +73,10 @@ class AdminOrganizationControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value(
                         "Organizations fetched successfully"))
-                .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data").isEmpty());
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content").isEmpty())
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10));
 
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
@@ -84,9 +96,45 @@ class AdminOrganizationControllerTest {
                 .andExpect(jsonPath("$.message").value(
                         "Organization deactivated successfully"));
 
-        verify(adminOrganizationService).getAllOrganizations();
+        verify(adminOrganizationService).getAllOrganizations(0, 10, null);
         verify(adminOrganizationService).activateOrganization(7L);
         verify(adminOrganizationService).deactivateOrganization(7L);
+    }
+
+    @Test
+    void adminCanFilterOrganizationsAndInvalidPaginationIsRejected() throws Exception {
+        when(adminOrganizationService.getAllOrganizations(2, 25, false))
+                .thenReturn(PageResponse.<com.collegeeventhub.admin.dto.AdminOrganizationResponse>
+                        builder()
+                        .content(List.of())
+                        .page(2)
+                        .size(25)
+                        .totalElements(51)
+                        .totalPages(3)
+                        .last(true)
+                        .build());
+
+        mockMvc.perform(endpoint(
+                        HttpMethod.GET,
+                        "/api/v1/admin/organizations?page=2&size=25&active=false"
+                ).with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(2))
+                .andExpect(jsonPath("$.data.totalElements").value(51));
+
+        mockMvc.perform(endpoint(
+                        HttpMethod.GET,
+                        "/api/v1/admin/organizations?page=-1"
+                ).with(user("admin").roles("ADMIN")))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(endpoint(
+                        HttpMethod.GET,
+                        "/api/v1/admin/organizations?size=51"
+                ).with(user("admin").roles("ADMIN")))
+                .andExpect(status().isBadRequest());
+
+        verify(adminOrganizationService).getAllOrganizations(2, 25, false);
     }
 
     @Test

@@ -1,12 +1,15 @@
 package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminOrganizationResponse;
-
-import java.util.List;
+import com.collegeeventhub.common.response.PageResponse;
 
 public interface AdminOrganizationService {
 
-    List<AdminOrganizationResponse> getAllOrganizations();
+    PageResponse<AdminOrganizationResponse> getAllOrganizations(
+            int page,
+            int size,
+            Boolean active
+    );
 
     void activateOrganization(Long organizationId);
 

@@ -1,8 +1,11 @@
 package com.collegeeventhub.admin.controller;
 
 import com.collegeeventhub.admin.service.AdminEventService;
+import com.collegeeventhub.common.enums.EventStatus;
+import com.collegeeventhub.common.enums.EventType;
 import com.collegeeventhub.common.exception.GlobalExceptionHandler;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
+import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.security.CustomAccessDeniedHandler;
 import com.collegeeventhub.common.security.CustomAuthenticationEntryPoint;
 import com.collegeeventhub.config.SecurityConfig;
@@ -58,15 +61,26 @@ class AdminEventControllerTest {
 
     @Test
     void adminCanUseEveryEndpointAndResponsesRemainUnchanged() throws Exception {
-        when(adminEventService.getAllEvents()).thenReturn(List.of());
+        when(adminEventService.getAllEvents(0, 10, null, null, null))
+                .thenReturn(PageResponse.<com.collegeeventhub.admin.dto.AdminEventResponse>
+                        builder()
+                        .content(List.of())
+                        .page(0)
+                        .size(10)
+                        .totalElements(0)
+                        .totalPages(0)
+                        .last(true)
+                        .build());
 
         mockMvc.perform(endpoint(HttpMethod.GET, "/api/v1/admin/events")
                         .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Events fetched successfully"))
-                .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data").isEmpty());
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content").isEmpty())
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10));
 
         mockMvc.perform(endpoint(
                         HttpMethod.PUT,
@@ -76,8 +90,50 @@ class AdminEventControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Event cancelled successfully"));
 
-        verify(adminEventService).getAllEvents();
+        verify(adminEventService).getAllEvents(0, 10, null, null, null);
         verify(adminEventService).cancelEvent(7L);
+    }
+
+    @Test
+    void adminCanFilterEventsAndInvalidPaginationIsRejected() throws Exception {
+        when(adminEventService.getAllEvents(
+                1,
+                20,
+                EventStatus.UPCOMING,
+                EventType.OFFLINE,
+                3L
+        )).thenReturn(PageResponse.<com.collegeeventhub.admin.dto.AdminEventResponse>
+                builder()
+                .content(List.of())
+                .page(1)
+                .size(20)
+                .totalElements(21)
+                .totalPages(2)
+                .last(true)
+                .build());
+
+        mockMvc.perform(endpoint(
+                        HttpMethod.GET,
+                        "/api/v1/admin/events?page=1&size=20&status=UPCOMING"
+                                + "&type=OFFLINE&organizationId=3"
+                ).with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.totalElements").value(21));
+
+        mockMvc.perform(endpoint(
+                        HttpMethod.GET,
+                        "/api/v1/admin/events?size=0"
+                ).with(user("admin").roles("ADMIN")))
+                .andExpect(status().isBadRequest());
+
+        verify(adminEventService).getAllEvents(
+                1,
+                20,
+                EventStatus.UPCOMING,
+                EventType.OFFLINE,
+                3L
+        );
     }
 
     @Test

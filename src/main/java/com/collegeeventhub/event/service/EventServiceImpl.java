@@ -1,9 +1,13 @@
 package com.collegeeventhub.event.service;
 
 import com.collegeeventhub.common.enums.EventStatus;
+import com.collegeeventhub.common.enums.EventType;
 import com.collegeeventhub.common.enums.NotificationType;
+import com.collegeeventhub.common.enums.Role;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
+import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.common.security.StudentProfileVerificationGuard;
+import com.collegeeventhub.common.util.Pagination;
 import com.collegeeventhub.event.dto.EventRequest;
 import com.collegeeventhub.event.dto.EventResponse;
 import com.collegeeventhub.event.entity.EventEntity;
@@ -14,15 +18,14 @@ import com.collegeeventhub.organization.entity.OrganizationEntity;
 import com.collegeeventhub.organization.repository.OrganizationRepository;
 import com.collegeeventhub.registration.entity.RegistrationEntity;
 import com.collegeeventhub.registration.repository.RegistrationRepository;
-import com.collegeeventhub.user.repository.UserRepository;
 import com.collegeeventhub.user.entity.UserEntity;
-
+import com.collegeeventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
@@ -65,36 +68,46 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EventResponse> getAllEvents() {
-
+    public PageResponse<EventResponse> getAllEvents(
+            int page,
+            int size,
+            EventType type,
+            Long organizationId) {
         UserEntity user = studentProfileVerificationGuard.checkAuthenticatedUser();
-
-        return eventRepository
-                .findByEventDateGreaterThanEqualAndStatusNotInOrderByEventDateAsc(
-                        LocalDate.now(),
-                        List.of(EventStatus.CANCELLED, EventStatus.DELETED)
-                )
-                .stream()
-                .filter(event -> eventEligibilityService.isEligible(user, event))
-                .map(eventMapper::toResponse)
-                .toList();
+        Page<EventEntity> events = findEventPage(
+                user,
+                LocalDate.now(),
+                null,
+                true,
+                true,
+                type,
+                organizationId,
+                page,
+                size
+        );
+        return PageResponse.from(events, eventMapper::toResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<EventResponse> getCancelledEvents() {
-
+    public PageResponse<EventResponse> getCancelledEvents(
+            int page,
+            int size,
+            EventType type,
+            Long organizationId) {
         UserEntity user = studentProfileVerificationGuard.checkAuthenticatedUser();
-
-        return eventRepository
-                .findByEventDateGreaterThanEqualAndStatusOrderByEventDateAsc(
-                        LocalDate.now(),
-                        EventStatus.CANCELLED
-                )
-                .stream()
-                .filter(event -> eventEligibilityService.isEligible(user, event))
-                .map(eventMapper::toResponse)
-                .toList();
+        Page<EventEntity> events = findEventPage(
+                user,
+                LocalDate.now(),
+                EventStatus.CANCELLED,
+                false,
+                true,
+                type,
+                organizationId,
+                page,
+                size
+        );
+        return PageResponse.from(events, eventMapper::toResponse);
     }
 
     @Override
@@ -115,8 +128,11 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EventResponse> getEventsByOrganization(
-            Long organizationId) {
+    public PageResponse<EventResponse> getEventsByOrganization(
+            Long organizationId,
+            int page,
+            int size,
+            EventType type) {
 
         UserEntity user = studentProfileVerificationGuard.checkAuthenticatedUser();
 
@@ -125,14 +141,60 @@ public class EventServiceImpl implements EventService {
                     "Organization not found with id: " + organizationId);
         }
 
-        return eventRepository.findByOrganizationIdAndStatusNot(
-                        organizationId,
-                        EventStatus.DELETED
+        Page<EventEntity> events = findEventPage(
+                user,
+                null,
+                null,
+                false,
+                true,
+                type,
+                organizationId,
+                page,
+                size
+        );
+        return PageResponse.from(events, eventMapper::toResponse);
+    }
+
+    private Page<EventEntity> findEventPage(
+            UserEntity user,
+            LocalDate eventDateFrom,
+            EventStatus status,
+            boolean excludeCancelled,
+            boolean excludeDeleted,
+            EventType type,
+            Long organizationId,
+            int page,
+            int size) {
+        return eventRepository.findAllByListingFilters(
+                eventDateFrom != null,
+                eventDateFrom == null ? LocalDate.of(1970, 1, 1) : eventDateFrom,
+                status != null,
+                status == null ? EventStatus.UPCOMING : status,
+                excludeCancelled,
+                excludeDeleted,
+                EventStatus.CANCELLED,
+                EventStatus.DELETED,
+                type != null,
+                type == null ? EventType.ONLINE : type,
+                organizationId != null,
+                organizationId == null ? -1L : organizationId,
+                user.getRole() == Role.STUDENT,
+                user.getBranch() != null,
+                user.getBranch() == null ? "" : user.getBranch(),
+                user.getAcademicYear() != null,
+                user.getAcademicYear() == null ? 0 : user.getAcademicYear(),
+                user.getSection() != null,
+                user.getSection() == null ? "" : user.getSection(),
+                Pagination.pageRequest(
+                        page,
+                        size,
+                        Sort.by(
+                                Sort.Order.asc("eventDate"),
+                                Sort.Order.asc("startTime"),
+                                Sort.Order.asc("id")
+                        )
                 )
-                .stream()
-                .filter(event -> eventEligibilityService.isEligible(user, event))
-                .map(eventMapper::toResponse)
-                .toList();
+        );
     }
 
     @Override

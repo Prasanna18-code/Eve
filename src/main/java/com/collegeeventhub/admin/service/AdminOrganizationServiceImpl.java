@@ -2,13 +2,15 @@ package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminOrganizationResponse;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
+import com.collegeeventhub.common.response.PageResponse;
+import com.collegeeventhub.common.util.Pagination;
 import com.collegeeventhub.organization.entity.OrganizationEntity;
 import com.collegeeventhub.organization.repository.OrganizationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -18,12 +20,21 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AdminOrganizationResponse> getAllOrganizations() {
-
-        return organizationRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    public PageResponse<AdminOrganizationResponse> getAllOrganizations(
+            int page,
+            int size,
+            Boolean active) {
+        Page<OrganizationEntity> organizations =
+                organizationRepository.findAllByFilters(
+                        active != null,
+                        Boolean.TRUE.equals(active),
+                        Pagination.pageRequest(
+                                page,
+                                size,
+                                Sort.by(Sort.Order.asc("id"))
+                        )
+                );
+        return PageResponse.from(organizations, this::toResponse);
     }
 
             @Override

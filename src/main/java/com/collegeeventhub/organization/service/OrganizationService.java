@@ -1,15 +1,18 @@
 package com.collegeeventhub.organization.service;
 
+import com.collegeeventhub.common.response.PageResponse;
 import com.collegeeventhub.organization.dto.OrganizationRequest;
 import com.collegeeventhub.organization.dto.OrganizationResponse;
-
-import java.util.List;
 
 public interface OrganizationService {
 
     OrganizationResponse createOrganization(String username, OrganizationRequest request);
 
-    List<OrganizationResponse> getAllOrganizations();
+    PageResponse<OrganizationResponse> getAllOrganizations(
+            int page,
+            int size,
+            Boolean active
+    );
 
     OrganizationResponse getOrganizationById(Long id);
 
