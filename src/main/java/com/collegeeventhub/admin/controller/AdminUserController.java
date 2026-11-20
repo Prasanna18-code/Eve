@@ -1,12 +1,15 @@
 package com.collegeeventhub.admin.controller;
 
 import com.collegeeventhub.admin.dto.AdminUserPageResponse;
+import com.collegeeventhub.admin.dto.AdminUserResponse;
+import com.collegeeventhub.admin.dto.AdminUserRoleRequest;
 import com.collegeeventhub.admin.service.AdminUserService;
 import com.collegeeventhub.common.enums.Role;
 import com.collegeeventhub.common.exception.BadRequestException;
 import com.collegeeventhub.common.response.ApiResponse;
 import com.collegeeventhub.security.AuthenticatedUserPrincipal;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -78,6 +82,29 @@ public class AdminUserController {
 
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "User deactivated successfully", null)
+        );
+    }
+
+    @PutMapping("/{userId}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserRole(
+            @PathVariable Long userId,
+            @Valid @RequestBody AdminUserRoleRequest request,
+            Authentication authentication) {
+        if (!(authentication.getPrincipal()
+                instanceof AuthenticatedUserPrincipal principal)) {
+            throw new AccessDeniedException(
+                    "Authenticated user identity is unavailable");
+        }
+
+        AdminUserResponse user = adminUserService.updateUserRole(
+                userId,
+                request.getRole(),
+                principal.getId()
+        );
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "User role updated successfully", user)
         );
     }
 }

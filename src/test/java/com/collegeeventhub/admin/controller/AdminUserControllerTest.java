@@ -22,6 +22,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -47,7 +48,8 @@ class AdminUserControllerTest {
     private static final List<Endpoint> ENDPOINTS = List.of(
             new Endpoint(HttpMethod.GET, "/api/v1/admin/users"),
             new Endpoint(HttpMethod.PUT, "/api/v1/admin/users/7/activate"),
-            new Endpoint(HttpMethod.PUT, "/api/v1/admin/users/7/deactivate")
+            new Endpoint(HttpMethod.PUT, "/api/v1/admin/users/7/deactivate"),
+            new Endpoint(HttpMethod.PUT, "/api/v1/admin/users/8/role")
     );
 
     @Autowired
@@ -64,8 +66,16 @@ class AdminUserControllerTest {
 
     @Test
     void adminCanUseEveryEndpointAndResponsesRemainUnchanged() throws Exception {
+        AdminUserResponse updatedUser = AdminUserResponse.builder()
+                .id(8L)
+                .username("faculty")
+                .role(Role.FACULTY)
+                .active(true)
+                .build();
         when(adminUserService.getAllUsers(0, 10, null, null))
                 .thenReturn(pageResponse(List.of(), 0, 10, 0, 0, true));
+        when(adminUserService.updateUserRole(8L, Role.FACULTY, 7L))
+                .thenReturn(updatedUser);
 
         mockMvc.perform(endpoint(HttpMethod.GET, "/api/v1/admin/users")
                         .with(user("admin").roles("ADMIN")))
@@ -94,9 +104,23 @@ class AdminUserControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("User deactivated successfully"));
 
+        mockMvc.perform(endpoint(
+                        HttpMethod.PUT,
+                        "/api/v1/admin/users/8/role"
+                ).with(user(principal(7L, "admin")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"FACULTY\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value(
+                        "User role updated successfully"))
+                .andExpect(jsonPath("$.data.id").value(8))
+                .andExpect(jsonPath("$.data.role").value("FACULTY"));
+
         verify(adminUserService).getAllUsers(0, 10, null, null);
         verify(adminUserService).activateUser(7L);
         verify(adminUserService).deactivateUser(7L, 7L);
+        verify(adminUserService).updateUserRole(8L, Role.FACULTY, 7L);
     }
 
     @Test
@@ -155,6 +179,45 @@ class AdminUserControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(adminUserService);
+    }
+
+    @Test
+    void roleUpdateRequiresAValidRole() throws Exception {
+        mockMvc.perform(endpoint(
+                        HttpMethod.PUT,
+                        "/api/v1/admin/users/8/role"
+                ).with(user(principal(7L, "admin")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":null}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(endpoint(
+                        HttpMethod.PUT,
+                        "/api/v1/admin/users/8/role"
+                ).with(user(principal(7L, "admin")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"NOT_A_ROLE\"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(adminUserService);
+    }
+
+    @Test
+    void roleUpdateNotFoundReturnsExistingErrorResponse() throws Exception {
+        doThrow(new ResourceNotFoundException("User not found"))
+                .when(adminUserService).updateUserRole(404L, Role.FACULTY, 7L);
+
+        mockMvc.perform(endpoint(
+                        HttpMethod.PUT,
+                        "/api/v1/admin/users/404/role"
+                ).with(user(principal(7L, "admin")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"FACULTY\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("User not found"));
+
+        verify(adminUserService).updateUserRole(404L, Role.FACULTY, 7L);
     }
 
     @Test
@@ -248,8 +311,14 @@ class AdminUserControllerTest {
 
     private record Endpoint(HttpMethod method, String path) {
         private MockHttpServletRequestBuilder request() {
-            return org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                    .request(method, path);
+            MockHttpServletRequestBuilder request =
+                    org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                            .request(method, path);
+            if (path.endsWith("/role")) {
+                request.contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"FACULTY\"}");
+            }
+            return request;
         }
     }
 

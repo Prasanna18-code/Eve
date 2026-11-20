@@ -82,6 +82,118 @@ class AdminUserServiceImplTest {
     }
 
     @Test
+    void deactivateUserCannotRemoveLastActiveAdmin() {
+        UserEntity admin = UserEntity.builder()
+                .id(8L)
+                .role(Role.ADMIN)
+                .active(true)
+                .build();
+        when(userRepository.findById(8L)).thenReturn(Optional.of(admin));
+        when(userRepository.findActiveUsersByRoleForUpdate(Role.ADMIN))
+                .thenReturn(List.of(admin));
+
+        assertThrows(
+                BadRequestException.class,
+                () -> adminUserService.deactivateUser(8L, 7L)
+        );
+        verify(userRepository, never()).save(admin);
+    }
+
+    @Test
+    void updateUserRoleUpdatesAndReturnsUser() {
+        UserEntity student = UserEntity.builder()
+                .id(8L)
+                .username("student")
+                .email("student@example.com")
+                .firstName("Test")
+                .lastName("Student")
+                .role(Role.STUDENT)
+                .active(true)
+                .build();
+        when(userRepository.findById(8L)).thenReturn(Optional.of(student));
+        when(userRepository.save(student)).thenReturn(student);
+
+        AdminUserResponse result =
+                adminUserService.updateUserRole(8L, Role.FACULTY, 7L);
+
+        assertEquals(Role.FACULTY, student.getRole());
+        assertEquals(Role.FACULTY, result.getRole());
+        verify(userRepository).save(student);
+    }
+
+    @Test
+    void updateUserRoleRejectsSelfDemotion() {
+        UserEntity admin = UserEntity.builder()
+                .id(7L)
+                .role(Role.ADMIN)
+                .active(true)
+                .build();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(admin));
+
+        assertThrows(
+                BadRequestException.class,
+                () -> adminUserService.updateUserRole(7L, Role.FACULTY, 7L)
+        );
+        verify(userRepository, never()).save(admin);
+        verify(userRepository, never())
+                .findActiveUsersByRoleForUpdate(Role.ADMIN);
+    }
+
+    @Test
+    void updateUserRoleCannotDemoteLastActiveAdmin() {
+        UserEntity admin = UserEntity.builder()
+                .id(7L)
+                .role(Role.ADMIN)
+                .active(true)
+                .build();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(admin));
+        when(userRepository.findActiveUsersByRoleForUpdate(Role.ADMIN))
+                .thenReturn(List.of(admin));
+
+        assertThrows(
+                BadRequestException.class,
+                () -> adminUserService.updateUserRole(7L, Role.FACULTY, 8L)
+        );
+        verify(userRepository, never()).save(admin);
+    }
+
+    @Test
+    void updateUserRoleCanDemoteAnAdminWhenAnotherActiveAdminRemains() {
+        UserEntity admin = UserEntity.builder()
+                .id(8L)
+                .role(Role.ADMIN)
+                .active(true)
+                .build();
+        UserEntity otherAdmin = UserEntity.builder()
+                .id(7L)
+                .role(Role.ADMIN)
+                .active(true)
+                .build();
+        when(userRepository.findById(8L)).thenReturn(Optional.of(admin));
+        when(userRepository.findActiveUsersByRoleForUpdate(Role.ADMIN))
+                .thenReturn(List.of(otherAdmin, admin));
+        when(userRepository.save(admin)).thenReturn(admin);
+
+        AdminUserResponse result =
+                adminUserService.updateUserRole(8L, Role.CLUB_ADMIN, 7L);
+
+        assertEquals(Role.CLUB_ADMIN, result.getRole());
+        verify(userRepository).save(admin);
+    }
+
+    @Test
+    void updateUserRolePreservesNotFoundBehavior() {
+        when(userRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> adminUserService.updateUserRole(404L, Role.FACULTY, 7L)
+        );
+        verify(userRepository, never())
+                .findActiveUsersByRoleForUpdate(Role.ADMIN);
+    }
+
+    @Test
     void getAllUsersAppliesFiltersAndReturnsRequestedPage() {
         UserEntity inactiveStudent = UserEntity.builder()
                 .id(8L)

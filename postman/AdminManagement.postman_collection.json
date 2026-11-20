@@ -117,6 +117,17 @@
       "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can still list users', () => pm.response.to.have.status(200));", "const admin = pm.response.json().data.content.find((user) => user.username === pm.environment.get('adminUsername'));", "pm.test('Admin remains active', () => pm.expect(admin.active).to.eql(true));"]}}]
     },
     {
+      "name": "08c - Admin changes student role",
+      "request": {
+        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+        "method": "PUT",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"role\": \"FACULTY\"\n}"},
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users/{{studentId}}/role", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users", "{{studentId}}", "role"]}
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin changes the student role', () => pm.response.to.have.status(200));", "pm.test('Updated role is returned', () => pm.expect(pm.response.json().data.role).to.eql('FACULTY'));"]}}]
+    },
+    {
       "name": "09 - Admin deactivates student",
       "request": {
         "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},

@@ -14,6 +14,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class AdminUserServiceImpl implements AdminUserService {
@@ -78,8 +80,46 @@ public class AdminUserServiceImpl implements AdminUserService {
                     "You cannot deactivate your own account");
         }
 
+        if (Boolean.TRUE.equals(user.getActive()) && user.getRole() == Role.ADMIN) {
+            ensureAnotherActiveAdminRemains();
+        }
+
         user.setActive(false);
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public AdminUserResponse updateUserRole(
+            Long userId,
+            Role role,
+            Long adminUserId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
+
+        if (user.getId().equals(adminUserId) && user.getRole() != role) {
+            throw new BadRequestException(
+                    "You cannot change your own role");
+        }
+
+        if (Boolean.TRUE.equals(user.getActive())
+                && user.getRole() == Role.ADMIN
+                && role != Role.ADMIN) {
+            ensureAnotherActiveAdminRemains();
+        }
+
+        user.setRole(role);
+        return toResponse(userRepository.save(user));
+    }
+
+    private void ensureAnotherActiveAdminRemains() {
+        List<UserEntity> activeAdmins =
+                userRepository.findActiveUsersByRoleForUpdate(Role.ADMIN);
+        if (activeAdmins.size() <= 1) {
+            throw new BadRequestException(
+                    "At least one active administrator must remain");
+        }
     }
 
     private AdminUserResponse toResponse(UserEntity user) {
