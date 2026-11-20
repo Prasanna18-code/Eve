@@ -1,6 +1,7 @@
 package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminUserResponse;
+import com.collegeeventhub.common.exception.BadRequestException;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.user.entity.UserEntity;
 import com.collegeeventhub.user.repository.UserRepository;
@@ -40,14 +41,14 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional
-    public void deactivateUser(Long userId, String adminUsername) {
+    public void deactivateUser(Long userId, Long adminUserId) {
 
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("User not found"));
 
-        if (user.getUsername().equals(adminUsername)) {
-            throw new IllegalStateException(
+        if (user.getId().equals(adminUserId)) {
+            throw new BadRequestException(
                     "You cannot deactivate your own account");
         }
 

@@ -10,5 +10,5 @@ public interface AdminUserService {
 
     void activateUser(Long userId);
 
-    void deactivateUser(Long userId, String adminUsername);
+    void deactivateUser(Long userId, Long adminUserId);
 }
