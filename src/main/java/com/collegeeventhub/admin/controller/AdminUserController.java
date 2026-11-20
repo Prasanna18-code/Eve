@@ -1,7 +1,9 @@
 package com.collegeeventhub.admin.controller;
 
-import com.collegeeventhub.admin.dto.AdminUserResponse;
+import com.collegeeventhub.admin.dto.AdminUserPageResponse;
 import com.collegeeventhub.admin.service.AdminUserService;
+import com.collegeeventhub.common.enums.Role;
+import com.collegeeventhub.common.exception.BadRequestException;
 import com.collegeeventhub.common.response.ApiResponse;
 import com.collegeeventhub.security.AuthenticatedUserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -12,10 +14,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/users")
@@ -26,9 +27,21 @@ public class AdminUserController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<AdminUserResponse>>> getAllUsers() {
+    public ResponseEntity<ApiResponse<AdminUserPageResponse>> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Role role,
+            @RequestParam(required = false) Boolean active) {
 
-        List<AdminUserResponse> users = adminUserService.getAllUsers();
+        if (page < 0) {
+            throw new BadRequestException("Page index must not be negative");
+        }
+        if (size < 1 || size > 50) {
+            throw new BadRequestException("Page size must be between 1 and 50");
+        }
+
+        AdminUserPageResponse users =
+                adminUserService.getAllUsers(page, size, role, active);
 
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Users fetched successfully", users)

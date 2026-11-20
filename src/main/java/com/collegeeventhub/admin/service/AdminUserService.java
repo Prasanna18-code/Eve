@@ -1,12 +1,16 @@
 package com.collegeeventhub.admin.service;
 
-import com.collegeeventhub.admin.dto.AdminUserResponse;
-
-import java.util.List;
+import com.collegeeventhub.admin.dto.AdminUserPageResponse;
+import com.collegeeventhub.common.enums.Role;
 
 public interface AdminUserService {
 
-    List<AdminUserResponse> getAllUsers();
+    AdminUserPageResponse getAllUsers(
+            int page,
+            int size,
+            Role role,
+            Boolean active
+    );
 
     void activateUser(Long userId);
 

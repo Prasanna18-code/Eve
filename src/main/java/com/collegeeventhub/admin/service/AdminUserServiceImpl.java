@@ -1,15 +1,18 @@
 package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminUserResponse;
+import com.collegeeventhub.admin.dto.AdminUserPageResponse;
+import com.collegeeventhub.common.enums.Role;
 import com.collegeeventhub.common.exception.BadRequestException;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.user.entity.UserEntity;
 import com.collegeeventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -19,12 +22,35 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AdminUserResponse> getAllUsers() {
+    public AdminUserPageResponse getAllUsers(
+            int page,
+            int size,
+            Role role,
+            Boolean active) {
 
-        return userRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        Page<UserEntity> users = userRepository.findAllByFilters(
+                role,
+                active,
+                PageRequest.of(
+                        page,
+                        size,
+                        Sort.by(
+                                Sort.Order.desc("createdAt"),
+                                Sort.Order.desc("id")
+                        )
+                )
+        );
+
+        return AdminUserPageResponse.builder()
+                .content(users.getContent().stream()
+                        .map(this::toResponse)
+                        .toList())
+                .page(users.getNumber())
+                .size(users.getSize())
+                .totalElements(users.getTotalElements())
+                .totalPages(users.getTotalPages())
+                .last(users.isLast())
+                .build();
     }
 
     @Override

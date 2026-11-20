@@ -1,5 +1,8 @@
 package com.collegeeventhub.admin.service;
 
+import com.collegeeventhub.admin.dto.AdminUserPageResponse;
+import com.collegeeventhub.admin.dto.AdminUserResponse;
+import com.collegeeventhub.common.enums.Role;
 import com.collegeeventhub.common.exception.BadRequestException;
 import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.user.entity.UserEntity;
@@ -9,9 +12,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
+import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.never;
@@ -71,5 +79,51 @@ class AdminUserServiceImplTest {
 
         assertFalse(student.getActive());
         verify(userRepository).save(student);
+    }
+
+    @Test
+    void getAllUsersAppliesFiltersAndReturnsRequestedPage() {
+        UserEntity inactiveStudent = UserEntity.builder()
+                .id(8L)
+                .username("inactive-student")
+                .email("inactive@example.com")
+                .firstName("Inactive")
+                .lastName("Student")
+                .role(Role.STUDENT)
+                .active(false)
+                .build();
+        PageRequest pageable = PageRequest.of(
+                1,
+                2,
+                Sort.by(
+                        Sort.Order.desc("createdAt"),
+                        Sort.Order.desc("id")
+                )
+        );
+        when(userRepository.findAllByFilters(Role.STUDENT, false, pageable))
+                .thenReturn(new PageImpl<>(
+                        List.of(inactiveStudent),
+                        pageable,
+                        3
+                ));
+
+        AdminUserPageResponse result = adminUserService.getAllUsers(
+                1,
+                2,
+                Role.STUDENT,
+                false
+        );
+
+        assertEquals(1, result.getPage());
+        assertEquals(2, result.getSize());
+        assertEquals(3, result.getTotalElements());
+        assertEquals(2, result.getTotalPages());
+        assertEquals(true, result.isLast());
+        assertEquals(1, result.getContent().size());
+        AdminUserResponse listedUser = result.getContent().get(0);
+        assertEquals(8L, listedUser.getId());
+        assertEquals(Role.STUDENT, listedUser.getRole());
+        assertEquals(false, listedUser.getActive());
+        verify(userRepository).findAllByFilters(Role.STUDENT, false, pageable);
     }
 }

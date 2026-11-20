@@ -94,9 +94,9 @@
       "request": {
         "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
         "method": "GET",
-        "url": {"raw": "{{baseUrl}}/api/v1/admin/users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"]}
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users?size=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"], "query": [{"key": "size", "value": "50"}]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list users', () => pm.response.to.have.status(200));", "const users = pm.response.json().data;", "const student = users.find((user) => String(user.id) === String(pm.environment.get('studentId')));", "const admin = users.find((user) => user.username === pm.environment.get('adminUsername'));", "pm.test('Student fixture is listed', () => pm.expect(student).to.exist);", "pm.test('Admin fixture is listed', () => pm.expect(admin).to.exist);", "if (admin) pm.environment.set('adminId', admin.id);"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can list users', () => pm.response.to.have.status(200));", "const users = pm.response.json().data.content;", "const student = users.find((user) => String(user.id) === String(pm.environment.get('studentId')));", "const admin = users.find((user) => user.username === pm.environment.get('adminUsername'));", "pm.test('Student fixture is listed', () => pm.expect(student).to.exist);", "pm.test('Admin fixture is listed', () => pm.expect(admin).to.exist);", "if (admin) pm.environment.set('adminId', admin.id);"]}}]
     },
     {
       "name": "08a - Admin cannot deactivate own account",
@@ -112,9 +112,9 @@
       "request": {
         "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
         "method": "GET",
-        "url": {"raw": "{{baseUrl}}/api/v1/admin/users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"]}
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users?size=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"], "query": [{"key": "size", "value": "50"}]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can still list users', () => pm.response.to.have.status(200));", "const admin = pm.response.json().data.find((user) => user.username === pm.environment.get('adminUsername'));", "pm.test('Admin remains active', () => pm.expect(admin.active).to.eql(true));"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin can still list users', () => pm.response.to.have.status(200));", "const admin = pm.response.json().data.content.find((user) => user.username === pm.environment.get('adminUsername'));", "pm.test('Admin remains active', () => pm.expect(admin.active).to.eql(true));"]}}]
     },
     {
       "name": "09 - Admin deactivates student",
@@ -139,9 +139,9 @@
       "request": {
         "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
         "method": "GET",
-        "url": {"raw": "{{baseUrl}}/api/v1/admin/users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"]}
+        "url": {"raw": "{{baseUrl}}/api/v1/admin/users?size=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "users"], "query": [{"key": "size", "value": "50"}]}
       },
-      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin reloads users', () => pm.response.to.have.status(200));", "const student = pm.response.json().data.find((user) => String(user.id) === String(pm.environment.get('studentId')));", "pm.test('Student active is false', () => pm.expect(student.active).to.eql(false));"]}}]
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('Admin reloads users', () => pm.response.to.have.status(200));", "const student = pm.response.json().data.content.find((user) => String(user.id) === String(pm.environment.get('studentId')));", "pm.test('Student active is false', () => pm.expect(student.active).to.eql(false));"]}}]
     },
     {
       "name": "12 - Admin reactivates student",
