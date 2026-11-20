@@ -3,8 +3,10 @@ package com.collegeeventhub.admin.controller;
 import com.collegeeventhub.admin.dto.AdminUserResponse;
 import com.collegeeventhub.admin.service.AdminUserService;
 import com.collegeeventhub.common.response.ApiResponse;
+import com.collegeeventhub.security.AuthenticatedUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,10 +52,15 @@ public class AdminUserController {
     public ResponseEntity<ApiResponse<Void>> deactivateUser(
             @PathVariable Long userId,
             Authentication authentication) {
+        if (!(authentication.getPrincipal()
+                instanceof AuthenticatedUserPrincipal principal)) {
+            throw new AccessDeniedException(
+                    "Authenticated user identity is unavailable");
+        }
 
         adminUserService.deactivateUser(
                 userId,
-                authentication.getName()
+                principal.getId()
         );
 
         return ResponseEntity.ok(

@@ -1,5 +1,7 @@
 package com.collegeeventhub.admin.service;
 
+import com.collegeeventhub.common.exception.BadRequestException;
+import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.user.entity.UserEntity;
 import com.collegeeventhub.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,22 +41,33 @@ class AdminUserServiceImplTest {
         when(userRepository.findById(7L)).thenReturn(Optional.of(admin));
 
         assertThrows(
-                IllegalStateException.class,
-                () -> adminUserService.deactivateUser(7L, "platform-admin")
+                BadRequestException.class,
+                () -> adminUserService.deactivateUser(7L, 7L)
         );
         verify(userRepository, never()).save(admin);
     }
 
     @Test
-    void deactivateUserDisablesAnotherAccount() {
+    void deactivateUserPreservesNotFoundBehavior() {
+        when(userRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> adminUserService.deactivateUser(404L, 7L)
+        );
+        verify(userRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void deactivateUserAllowsDifferentIdWithSameUsernameAsAdmin() {
         UserEntity student = UserEntity.builder()
                 .id(8L)
-                .username("student")
+                .username("platform-admin")
                 .active(true)
                 .build();
         when(userRepository.findById(8L)).thenReturn(Optional.of(student));
 
-        adminUserService.deactivateUser(8L, "platform-admin");
+        adminUserService.deactivateUser(8L, 7L);
 
         assertFalse(student.getActive());
         verify(userRepository).save(student);
