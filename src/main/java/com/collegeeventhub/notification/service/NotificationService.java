@@ -27,4 +27,11 @@ public interface NotificationService {
             String message,
             NotificationType type
     );
+
+    void createEventCancellationNotificationIfAbsent(
+            Long userId,
+            Long eventId,
+            String title,
+            String message
+    );
 }

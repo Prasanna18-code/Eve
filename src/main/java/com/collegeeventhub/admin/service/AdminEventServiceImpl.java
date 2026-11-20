@@ -1,10 +1,9 @@
 package com.collegeeventhub.admin.service;
 
 import com.collegeeventhub.admin.dto.AdminEventResponse;
-import com.collegeeventhub.common.enums.EventStatus;
-import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.event.entity.EventEntity;
 import com.collegeeventhub.event.repository.EventRepository;
+import com.collegeeventhub.event.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +15,7 @@ import java.util.List;
 public class AdminEventServiceImpl implements AdminEventService {
 
     private final EventRepository eventRepository;
+    private final EventService eventService;
 
     @Override
     @Transactional(readOnly = true)
@@ -30,16 +30,7 @@ public class AdminEventServiceImpl implements AdminEventService {
     @Override
     @Transactional
     public void cancelEvent(Long eventId) {
-
-        EventEntity event = eventRepository.findByIdAndStatusNot(
-                        eventId,
-                        EventStatus.DELETED
-                )
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Event not found"));
-
-        event.setStatus(EventStatus.CANCELLED);
-        eventRepository.save(event);
+        eventService.cancelEventByAdmin(eventId);
     }
 
     private AdminEventResponse toResponse(EventEntity event) {

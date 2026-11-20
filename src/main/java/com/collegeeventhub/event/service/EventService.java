@@ -38,4 +38,6 @@ public interface EventService {
             Long eventId,
             String username
     );
+
+    void cancelEventByAdmin(Long eventId);
 }

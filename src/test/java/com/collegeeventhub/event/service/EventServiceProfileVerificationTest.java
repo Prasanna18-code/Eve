@@ -115,7 +115,7 @@ class EventServiceProfileVerificationTest {
         when(eventRepository.save(event)).thenReturn(event);
         when(eventMapper.toResponse(event))
                 .thenReturn(EventResponse.builder().id(10L).build());
-        when(eventRepository.findByIdAndStatusNot(10L, EventStatus.DELETED))
+        when(eventRepository.findForCancellation(10L, EventStatus.DELETED))
                 .thenReturn(Optional.of(event));
         when(registrationRepository.findByEventId(10L)).thenReturn(List.of());
 

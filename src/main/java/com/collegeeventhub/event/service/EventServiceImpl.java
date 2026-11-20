@@ -213,27 +213,38 @@ public class EventServiceImpl implements EventService {
             Long eventId,
             String username) {
 
-        EventEntity event =
-                eventRepository.findByIdAndStatusNot(eventId, EventStatus.DELETED)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Event not found with id: " + eventId));
+        EventEntity event = findEventForCancellation(eventId);
 
         verifyLeader(event.getOrganization(), username);
 
+        cancelEvent(event);
+    }
+
+    @Override
+    @Transactional
+    public void cancelEventByAdmin(Long eventId) {
+        cancelEvent(findEventForCancellation(eventId));
+    }
+
+    private EventEntity findEventForCancellation(Long eventId) {
+        return eventRepository.findForCancellation(eventId, EventStatus.DELETED)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Event not found with id: " + eventId));
+    }
+
+    private void cancelEvent(EventEntity event) {
         event.setStatus(EventStatus.CANCELLED);
         eventRepository.save(event);
 
         List<RegistrationEntity> registrations =
-                registrationRepository.findByEventId(eventId);
-
+                registrationRepository.findByEventId(event.getId());
         for (RegistrationEntity registration : registrations) {
-            notificationService.createNotification(
+            notificationService.createEventCancellationNotificationIfAbsent(
                     registration.getUser().getId(),
                     event.getId(),
                     "Event Cancelled",
-                    "The event \"" + event.getTitle() + "\" has been cancelled.",
-                    NotificationType.EVENT_CANCELLED
+                    "The event \"" + event.getTitle() + "\" has been cancelled."
             );
         }
     }

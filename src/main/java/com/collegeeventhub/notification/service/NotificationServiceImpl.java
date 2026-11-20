@@ -167,6 +167,31 @@ public class NotificationServiceImpl implements NotificationService {
         notificationRepository.save(notification);
     }
 
+    @Override
+    @Transactional
+    public void createEventCancellationNotificationIfAbsent(
+            Long userId,
+            Long eventId,
+            String title,
+            String message) {
+
+        if (notificationRepository.existsByUserIdAndEventIdAndType(
+                userId,
+                eventId,
+                NotificationType.EVENT_CANCELLED
+        )) {
+            return;
+        }
+
+        createNotification(
+                userId,
+                eventId,
+                title,
+                message,
+                NotificationType.EVENT_CANCELLED
+        );
+    }
+
     private boolean isEnabled(
             NotificationPreferenceEntity preferences,
             NotificationType type) {

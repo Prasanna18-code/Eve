@@ -1,6 +1,8 @@
 package com.collegeeventhub.admin.controller;
 
 import com.collegeeventhub.admin.service.AdminEventService;
+import com.collegeeventhub.common.exception.GlobalExceptionHandler;
+import com.collegeeventhub.common.exception.ResourceNotFoundException;
 import com.collegeeventhub.common.security.CustomAccessDeniedHandler;
 import com.collegeeventhub.common.security.CustomAuthenticationEntryPoint;
 import com.collegeeventhub.config.SecurityConfig;
@@ -22,6 +24,7 @@ import java.util.List;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
@@ -31,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(AdminEventController.class)
 @Import({
         SecurityConfig.class,
+        GlobalExceptionHandler.class,
         AdminEventControllerTest.SecurityHandlersConfiguration.class
 })
 class AdminEventControllerTest {
@@ -74,6 +78,22 @@ class AdminEventControllerTest {
 
         verify(adminEventService).getAllEvents();
         verify(adminEventService).cancelEvent(7L);
+    }
+
+    @Test
+    void invalidEventIdReturnsNotFound() throws Exception {
+        doThrow(new ResourceNotFoundException("Event not found with id: 404"))
+                .when(adminEventService).cancelEvent(404L);
+
+        mockMvc.perform(endpoint(
+                        HttpMethod.PUT,
+                        "/api/v1/admin/events/404/cancel"
+                ).with(user("admin").roles("ADMIN")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Event not found with id: 404"));
+
+        verify(adminEventService).cancelEvent(404L);
     }
 
     @Test

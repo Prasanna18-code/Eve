@@ -94,6 +94,7 @@ class EventCancellationNotificationIntegrationTest {
         ));
 
         eventService.cancelEvent(event.getId(), leader.getUsername());
+        eventService.cancelEvent(event.getId(), leader.getUsername());
 
         entityManager.flush();
         entityManager.clear();
