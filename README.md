@@ -39,9 +39,9 @@ COLLEGE_EVENT_HUB_JWT_SECRET
 
 `COLLEGE_EVENT_HUB_JWT_EXPIRATION` is optional and defaults to 86,400,000 ms.
 Production SQL logging is disabled. Never commit production credentials or
-deploy a local `.env` file. The production profile retains the existing
-Hibernate schema-update behavior; database migrations are a separate
-deployment-hardening task and are not provided by this profile.
+deploy a local `.env` file. The production profile uses Flyway migrations and
+sets Hibernate to `validate` so application startup fails if the schema does
+not match the entities.
 
 The Terraform-based AWS deployment path is documented in
 [deploy/aws/README.md](deploy/aws/README.md).
@@ -122,12 +122,20 @@ All endpoints require authentication. Placement management and applicant review
 require the `ADMIN` role. Applying and viewing personal applications require a
 verified `STUDENT` profile.
 
-The project currently uses Hibernate schema updates rather than an automated
-migration runner. Before deploying this version to a database with the existing
-admin audit table, apply
-[`src/main/resources/db/manual/V1__placement_audit_values.sql`](src/main/resources/db/manual/V1__placement_audit_values.sql)
-to extend its action and target-type check constraints. The SQL preserves all
-existing audit values and adds the Placement values.
+Flyway migrations live in
+[`src/main/resources/db/migration`](src/main/resources/db/migration). The
+production profile enables Flyway and sets Hibernate to `validate`. Existing
+databases are baselined at version 1 before later migrations run; clean
+databases receive `V1__baseline_schema.sql`, and `V2__audit_action_constraints.sql`
+adds placement audit constraint values.
+
+Production migration startup also:
+
+- validates migration checksums before applying changes;
+- disables Flyway clean operations;
+- prohibits out-of-order migrations;
+- requires the application role to have the database privileges needed to
+  create the Flyway history table and apply migrations.
 
 ## Event feedback
 
