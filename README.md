@@ -4,23 +4,47 @@ College Event Hub backend built with Spring Boot and PostgreSQL.
 
 ## Local configuration
 
-The application loads local settings from the ignored project-root `.env` file.
-Set these variables there before starting the default application profile:
+For local development, copy `.env.example` to the ignored project-root `.env`
+and set the database passwords and JWT signing key:
 
 ```properties
+COLLEGE_EVENT_HUB_DB_URL=jdbc:postgresql://localhost:5432/college_event_hub
+COLLEGE_EVENT_HUB_DB_USERNAME=postgres
 COLLEGE_EVENT_HUB_DB_PASSWORD=
+COLLEGE_STUDENT_DIRECTORY_DB_URL=jdbc:postgresql://localhost:5432/college_student_directory
+COLLEGE_STUDENT_DIRECTORY_DB_USERNAME=college_student_directory
 COLLEGE_STUDENT_DIRECTORY_DB_PASSWORD=
 COLLEGE_EVENT_HUB_JWT_SECRET=
+COLLEGE_EVENT_HUB_JWT_EXPIRATION=86400000
 ```
 
-For the Newman test profile, also set:
+The JWT signing key must contain at least 32 bytes. Keep `.env` private; it is
+excluded from Git. The default `local` profile loads it automatically.
+
+## Production profile
+
+Activate the `prod` profile with `SPRING_PROFILES_ACTIVE=prod`. It does not load
+`.env` and requires these values from the deployment environment or a secrets
+manager:
 
 ```properties
-NEWMAN_APP_DB_PASSWORD=
-NEWMAN_DIRECTORY_DB_PASSWORD=
+COLLEGE_EVENT_HUB_DB_URL
+COLLEGE_EVENT_HUB_DB_USERNAME
+COLLEGE_EVENT_HUB_DB_PASSWORD
+COLLEGE_STUDENT_DIRECTORY_DB_URL
+COLLEGE_STUDENT_DIRECTORY_DB_USERNAME
+COLLEGE_STUDENT_DIRECTORY_DB_PASSWORD
+COLLEGE_EVENT_HUB_JWT_SECRET
 ```
 
-Keep `.env` private; it is excluded from Git.
+`COLLEGE_EVENT_HUB_JWT_EXPIRATION` is optional and defaults to 86,400,000 ms.
+Production SQL logging is disabled. Never commit production credentials or
+deploy a local `.env` file. The production profile retains the existing
+Hibernate schema-update behavior; database migrations are a separate
+deployment-hardening task and are not provided by this profile.
+
+For the Newman test profile, set `NEWMAN_APP_DB_PASSWORD` and
+`NEWMAN_DIRECTORY_DB_PASSWORD` in `.env`.
 
 ## Run
 
