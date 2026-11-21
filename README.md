@@ -34,6 +34,19 @@ Run the isolated Newman test profile on port 8082 with:
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=newman-test"
 ```
 
+## Tests
+
+Run the unit and integration test suite with:
+
+```powershell
+.\mvnw.cmd test
+```
+
+Integration tests use the configured local PostgreSQL databases. Set
+`COLLEGE_EVENT_HUB_DB_PASSWORD` and `COLLEGE_STUDENT_DIRECTORY_DB_PASSWORD` in
+the project-root `.env` file. The student-directory connection test also
+requires the `student_directory` table to be available.
+
 ## Placement module
 
 The Placement API supports admin-managed job and internship listings, student
