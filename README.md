@@ -62,3 +62,20 @@ admin audit table, apply
 [`src/main/resources/db/manual/V1__placement_audit_values.sql`](src/main/resources/db/manual/V1__placement_audit_values.sql)
 to extend its action and target-type check constraints. The SQL preserves all
 existing audit values and adds the Placement values.
+
+## Event feedback
+
+Verified students with a registered attendance record can submit one 1–5 star
+rating per event after its status is `COMPLETED` or its scheduled end time has
+passed. Cancelled and deleted events do not accept feedback. The submitting
+student may update or retrieve their own feedback; the event organization's
+leader and `ADMIN` users can review paginated feedback.
+
+- `POST /api/v1/events/{eventId}/feedback` submits feedback.
+- `PUT /api/v1/events/{eventId}/feedback` updates the authenticated student's
+  feedback.
+- `GET /api/v1/events/{eventId}/feedback/me` retrieves the student's feedback.
+- `GET /api/v1/events/{eventId}/feedback?page=0&size=10` lists feedback for the
+  event (organizer or `ADMIN` only).
+
+Feedback is unique per event and student at the database level.
