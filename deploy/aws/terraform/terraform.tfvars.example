@@ -1,0 +1,16 @@
+aws_region          = "CHANGE_ME"
+acm_certificate_arn = "arn:aws:acm:CHANGE_ME"
+
+# First apply with null to create ECR and shared infrastructure.
+# Set the pushed ECR image URI and the secret ARNs before the second apply.
+container_image = null
+
+directory_db_url_secret_arn      = null
+directory_db_username_secret_arn = null
+directory_db_password_secret_arn = null
+jwt_secret_arn                   = null
+
+# Cost-conscious portfolio defaults.
+# For higher availability, enable both settings and set desired_count = 2.
+db_multi_az       = false
+nat_gateway_per_az = false

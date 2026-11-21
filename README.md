@@ -43,6 +43,9 @@ deploy a local `.env` file. The production profile retains the existing
 Hibernate schema-update behavior; database migrations are a separate
 deployment-hardening task and are not provided by this profile.
 
+The Terraform-based AWS deployment path is documented in
+[deploy/aws/README.md](deploy/aws/README.md).
+
 For the Newman test profile, set `NEWMAN_APP_DB_PASSWORD` and
 `NEWMAN_DIRECTORY_DB_PASSWORD` in `.env`.
 

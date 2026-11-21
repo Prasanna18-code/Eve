@@ -35,6 +35,15 @@ build/
 # Local credentials
 .env
 
+# Terraform state and local deployment settings
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+.terraform.tfstate.lock.info
+
 # Local build and crash output
 /bin/
 compile-errors.txt
