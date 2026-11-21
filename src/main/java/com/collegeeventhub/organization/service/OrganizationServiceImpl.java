@@ -15,6 +15,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -26,6 +28,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final UserRepository userRepository;
 
     @Override
+    @CacheEvict(cacheNames = "organizations", allEntries = true)
     public OrganizationResponse createOrganization(
             String username,
             OrganizationRequest request) {
@@ -53,6 +56,10 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(
+            cacheNames = "organizations",
+            key = "#page + ':' + #size + ':' + #active"
+    )
     public PageResponse<OrganizationResponse> getAllOrganizations(
             int page,
             int size,
@@ -71,6 +78,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
+    @Cacheable(cacheNames = "organizations", key = "'id:' + #id")
     public OrganizationResponse getOrganizationById(Long id) {
 
         OrganizationEntity organization =
@@ -83,6 +91,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "organizations", allEntries = true)
     public OrganizationResponse updateOrganization(
             Long id,
             String username,
@@ -110,6 +119,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "organizations", allEntries = true)
     public void deleteOrganization(
             Long id,
             String username) {

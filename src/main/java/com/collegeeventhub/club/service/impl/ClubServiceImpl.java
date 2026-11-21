@@ -14,6 +14,8 @@ import com.collegeeventhub.user.entity.UserEntity;
 import com.collegeeventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class ClubServiceImpl implements ClubService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "clubs", allEntries = true)
     public ClubResponse createClub(
             Long organizationId,
             String username,
@@ -62,6 +65,7 @@ public class ClubServiceImpl implements ClubService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "clubs", key = "'all'")
     public List<ClubResponse> getAllClubs() {
         return clubRepository.findAll()
                 .stream()
@@ -71,6 +75,7 @@ public class ClubServiceImpl implements ClubService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "clubs", key = "'id:' + #clubId")
     public ClubResponse getClubById(Long clubId) {
         ClubEntity club = clubRepository.findById(clubId)
                 .orElseThrow(() ->
@@ -81,6 +86,7 @@ public class ClubServiceImpl implements ClubService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "clubs", key = "'organization:' + #organizationId")
     public List<ClubResponse> getClubsByOrganization(Long organizationId) {
         if (!organizationRepository.existsById(organizationId)) {
             throw new ResourceNotFoundException("Organization not found");
@@ -94,6 +100,7 @@ public class ClubServiceImpl implements ClubService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "clubs", allEntries = true)
     public ClubResponse updateClub(
             Long clubId,
             String username,
@@ -122,6 +129,7 @@ public class ClubServiceImpl implements ClubService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "clubs", allEntries = true)
     public void deleteClub(Long clubId, String username) {
         ClubEntity club = clubRepository.findById(clubId)
                 .orElseThrow(() ->

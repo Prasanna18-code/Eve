@@ -49,6 +49,32 @@ The Terraform-based AWS deployment path is documented in
 For the Newman test profile, set `NEWMAN_APP_DB_PASSWORD` and
 `NEWMAN_DIRECTORY_DB_PASSWORD` in `.env`.
 
+## Local caching and rate limiting
+
+The API uses a Caffeine cache for named event, resource, club, organization, and
+student-directory reads. The default cache holds up to 1,000 entries and expires
+entries one minute after writing:
+
+```properties
+cache.caffeine.maximum-size=1000
+cache.caffeine.ttl-minutes=1
+```
+
+Login and registration are throttled independently per client IP. Login permits
+10 requests in 10 minutes; registration permits 5 requests in one hour:
+
+```properties
+rate-limit.enabled=true
+rate-limit.login.capacity=10
+rate-limit.login.window-seconds=600
+rate-limit.registration.capacity=5
+rate-limit.registration.window-seconds=3600
+```
+
+Throttled authentication requests return HTTP 429 and a `Retry-After` header.
+These buckets are in memory and reset with the application process. They must
+use a shared store such as Redis before running multiple application instances.
+
 ## Run
 
 ```powershell

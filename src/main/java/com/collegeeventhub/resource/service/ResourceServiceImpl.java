@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class ResourceServiceImpl implements ResourceService {
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final StudentProfileVerificationGuard profileVerificationGuard;
+    private final ResourceCacheService resourceCacheService;
 
     @Override
     @Transactional(readOnly = true)
@@ -47,13 +49,7 @@ public class ResourceServiceImpl implements ResourceService {
             String username) {
         UserEntity user = findUser(username);
         requireVerifiedStudent(user);
-        Page<ResourceEntity> resources = resourceRepository.findActiveCatalog(
-                normalizeLowercase(query),
-                normalizeLowercase(category),
-                normalizeTag(tag),
-                pageable(page, size)
-        );
-        return PageResponse.from(resources, this::toResponse);
+        return resourceCacheService.getCatalog(page, size, query, category, tag);
     }
 
     @Override
@@ -61,13 +57,7 @@ public class ResourceServiceImpl implements ResourceService {
     public ResourceResponse getResource(Long resourceId, String username) {
         UserEntity user = findUser(username);
         requireVerifiedStudent(user);
-        ResourceEntity resource = resourceRepository
-                .findByIdAndActiveTrue(resourceId)
-                .filter(item -> Boolean.TRUE.equals(
-                        item.getOrganization().getActive()))
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Resource not found"));
-        return toResponse(resource);
+        return resourceCacheService.getResource(resourceId);
     }
 
     @Override
@@ -120,6 +110,7 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "resources", allEntries = true)
     public ResourceResponse createResource(
             ResourceCreateRequest request,
             String username) {
@@ -145,6 +136,7 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "resources", allEntries = true)
     public ResourceResponse updateResource(
             Long resourceId,
             ResourceUpdateRequest request,
@@ -161,6 +153,7 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "resources", allEntries = true)
     public ResourceResponse deactivateResource(
             Long resourceId,
             String username) {

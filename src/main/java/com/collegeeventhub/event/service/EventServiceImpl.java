@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -44,6 +45,7 @@ public class EventServiceImpl implements EventService {
     private final EventEligibilityService eventEligibilityService;
 
     @Override
+    @CacheEvict(cacheNames = "events", allEntries = true)
     public EventResponse createEvent(
             Long organizationId,
             String username,
@@ -198,6 +200,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "events", allEntries = true)
     public EventResponse updateEvent(
             Long eventId,
             String username,
@@ -253,6 +256,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "events", allEntries = true)
     public void deleteEvent(
             Long eventId,
             String username) {
@@ -271,6 +275,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "events", allEntries = true)
     public void cancelEvent(
             Long eventId,
             String username) {
@@ -284,6 +289,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "events", allEntries = true)
     public EventStatus cancelEventByAdmin(Long eventId) {
         return cancelEvent(findEventForCancellation(eventId));
     }

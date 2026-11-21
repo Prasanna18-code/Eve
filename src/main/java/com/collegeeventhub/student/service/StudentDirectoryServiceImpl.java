@@ -5,6 +5,7 @@ import com.collegeeventhub.student.dto.StudentDirectoryResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,6 +28,10 @@ public class StudentDirectoryServiceImpl implements StudentDirectoryService {
     }
 
     @Override
+    @Cacheable(
+            cacheNames = "studentDirectory",
+            key = "#rollNumber.trim().toLowerCase()"
+    )
     public StudentDirectoryResponse getStudentByRollNumber(String rollNumber) {
         try {
             return studentDirectoryJdbcTemplate.queryForObject(
