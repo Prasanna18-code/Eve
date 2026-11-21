@@ -79,3 +79,27 @@ leader and `ADMIN` users can review paginated feedback.
   event (organizer or `ADMIN` only).
 
 Feedback is unique per event and student at the database level.
+
+## Resource library
+
+The Resource Library catalogs external learning links with a title, description,
+category, and tags. Resources are associated with an organization. `ADMIN` users
+and that organization's leader can create, update, and deactivate its resources;
+deactivation is a soft delete. Only authenticated students with verified
+profiles can browse the active catalog.
+
+- `GET /api/v1/resources` returns a paginated catalog. Optional filters:
+  `q`, `category`, and `tag`; pagination uses `page` and `size`.
+- `GET /api/v1/resources/{id}` retrieves an active resource.
+- `POST /api/v1/resources` creates and immediately publishes a resource.
+  The request includes `organizationId`, `title`, `description`, `url`,
+  `category`, and optional `tags`.
+- `PUT /api/v1/resources/{id}` updates resource metadata.
+- `DELETE /api/v1/resources/{id}` deactivates the resource without deleting its
+  record.
+- `GET /api/v1/resources/manage` lists resources the authenticated admin or
+  organization leader can manage, including deactivated resources. Admins may
+  filter this list with `organizationId`.
+
+Resource URLs must use HTTP or HTTPS. File uploads and student-submitted
+resources are not supported.
